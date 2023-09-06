@@ -36,7 +36,7 @@ async function handleRequest(request) {
         <script>
           let text = document.getElementById('gerneratedLink');
           myButton.onclick = function(){
-            text.textContent = "https://roster.collard.au/?url=" + document.getElementById('amLink').value;
+            text.textContent = window.location.toString() + "?url=" + document.getElementById('amLink').value;
           };
         </script>
       </div>
