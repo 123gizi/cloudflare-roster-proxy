@@ -40,14 +40,16 @@ async function handleRequest(request) {
           };
         </script>
       </div>
-    </body>`;
+    </body>
+    </html>`;
   const html_denied = html_header + `
     <body>
       <div id="main">
         <h1>Action Not Allowed</h1>
         <p>The URL entered does not meet the requirements of this server.<br>Please check the URL entered and try again.<br><br>If you're still having issues, please consult your local company geek for assistance.</p>
       </div>
-    </body>`;
+    </body>
+    </html>`;
 
   const { searchParams } = new URL(request.url);
   let targetUrl = searchParams.get('url');
@@ -93,12 +95,22 @@ async function streamBody(readable, writable) {
     body += decoder.decode(value)
   }
   
-  body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro")
-  body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
+  //Adding a Name to the calendar and a suggested publish limit of no more than 1 hour
+  body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H")
+  
+  //Time logged for testing
+  //body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
   
   //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
-  body = body.replace(/(?<=;TZID=).*?(?=:)/sgm, "Etc/UTC")
-  //body = body.replaceAll("TZID=Australia/Darwin", "TZID=Etc/UTC")
+  body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
+  
+  //Filters to be used to remove some duplication of information inherent in AM
+  // Still a work in progress
+  // /(?=BEGIN:VEVENT).*?SUMMARY:STANDBY.*?(?<=END:VEVENT)/gsm
+  
+  //Remove additional spaces left over after AM removes unauthorised data for user
+  body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
+  body = body.replace(/&nbsp\\;/gms, " ")
 
   await writer.write(encoder.encode(body))
   await writer.close()
