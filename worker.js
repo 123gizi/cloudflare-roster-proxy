@@ -1,7 +1,8 @@
+import html_home from './html_home.html';
+import html_denied from './html_denied.html';
+
 export default {
   async fetch(request) {
-    //const base = 'https://example.com';
-    const html_header = '<!DOCTYPE html> <head> <title>Roster Domain - WIP</title> <link rel="icon" href="data:"> <style type="text/css"> body { background-color: #f0f0f2; margin: 0; padding: 0; font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;} #main { width: 600px; margin: 5em auto; padding: 2em; background-color: #fdfdff; border-radius: 0.5em; box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);} a:link, a:visited { color: #38488f; text-decoration: none;} @media (max-width: 700px) { div { margin: 0 auto; width: auto;}} </style> </head>';
     const init_default = {
       headers: {
         "content-type": "text/html; charset=UTF-8",
@@ -21,34 +22,6 @@ export default {
         "status": "403",
       },
     };
-    const html_content = html_header + `
-      <body>
-        <div id="main">
-          <h1>Welcome</h1>
-          <p>If you paste the external link provided by Air Maestro and click "Generate",<br>you will see the full link that you require for use in this <a href="https://github.com/123gizi/GAS-ICS-Sync" target="_blank">Google Apps Script</a>.</p>
-          <form id="myform">
-            <label for="amLink">Air Maestro External Link:</label><br>
-            <input type="text" id="amLink" name="amLink"><br><br>
-            <button type="button" id="myButton">Generate</button>
-          </form><br>
-          <div id="gerneratedLink" style="word-wrap: anywhere"></div>
-          <script>
-            let text = document.getElementById('gerneratedLink');
-            myButton.onclick = function(){
-              text.textContent = window.location.toString() + "?url=" + document.getElementById('amLink').value;
-            };
-          </script>
-        </div>
-      </body>
-      </html>`;
-    const html_denied = html_header + `
-      <body>
-        <div id="main">
-          <h1>Action Not Allowed</h1>
-          <p>The URL entered does not meet the requirements of this server.<br>Please check the URL entered and try again.<br><br>If you're still having issues, please consult your local company geek for assistance.</p>
-        </div>
-      </body>
-      </html>`;
     const { searchParams } = new URL(request.url);
     let targetUrl = searchParams.get('url');
 
@@ -72,7 +45,7 @@ export default {
         return new Response(html_denied, init_denied);
         }
     } else {
-      return new Response(html_content, init_default);
+      return new Response(html_home, init_default);
     }
 
   async function streamBody(readable, writable) {
@@ -104,10 +77,21 @@ export default {
     //Filters to be used to remove some duplication of information inherent in AM
     // Still a work in progress
     // /(?=BEGIN:VEVENT).*?SUMMARY:STANDBY.*?(?<=END:VEVENT)/gsm
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:RDO[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STANDBY[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CAO[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:LDO[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ALV[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:SICK[\s\S]+?END:VEVENT/g, "")
+
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*SAPL[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*STBY[\s\S]+?END:VEVENT/g, "")
 
     //Remove additional spaces left over after AM removes unauthorised data for user
-    body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
-    body = body.replace(/&nbsp\\;/gms, " ")
+    body = body.replace(/\\n\\n\\n\\n\\n/g, "\\n\\n")
+    body = body.replace(/&nbsp\\;/g, " ")
 
     await writer.write(encoder.encode(body))
     await writer.close()
