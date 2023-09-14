@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Roster Domain - WIP</title>
+    <title>Roster Workaround</title>
     <style type="text/css"> 
+      h1 {
+        text-align: center;
+      }
       body {
         background-color: #f0f0f2;
         margin: 0;
@@ -17,27 +20,44 @@
         border-radius: 0.5em;
         box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
       }
-      a:link, a:visited { color: #38488f; text-decoration: none;}
+      a:link, a:visited { color: #6911Ff; text-decoration: none;}
       @media (max-width: 700px)
         { div { margin: 0 auto; width: auto;}}
     </style>
   </head>
   <body>
     <div id="main">
-      <h1>Welcome</h1>
-      <p>If you paste the external link provided by Air Maestro and click "Generate",<br>you will see the full link that you require for use in this <a href="https://github.com/123gizi/GAS-ICS-Sync" target="_blank">Google Apps Script</a>.</p>
+      <h1>Welcome to the roster workaround</h1>
+      <p>You can generate your personal Air Maestro External Link by scrolling to the bottom of the Schedule page of Air Maestro.</p>
+      <p>Paste the external link from Air Maestro in the field below and click "Generate". You will see the full link that you require for use in whichever calendar service you choose. This link will also be copied to your clipboard to assist with adding it to a calendar service.</p>
+
       <form id="myform">
-        <label for="amLink">Air Maestro External Link:</label><br>
-        <input type="text" id="amLink" name="amLink"><br><br>
-        <button type="button" id="myButton">Generate</button>
-      </form><br>
-      <div id="gerneratedLink" style="word-wrap: anywhere"></div>
+        <label for="amLink">Paste Air Maestro External Link Here:</label><br>
+        <input type="text" id="amLink" name="amLink" size="50"><br><br>
+        <button type="button" id="generateBtn">Generate</button>
+      </form>
+      <div id="gerneratedLink" style="display: none; word-wrap: anywhere; border: 1px solid #ccc"></div><br>
       <script>
         let text = document.getElementById('gerneratedLink');
-        myButton.onclick = function(){
+        generateBtn.onclick = function generateLink(){
           text.textContent = window.location.toString() + "?url=" + document.getElementById('amLink').value;
+          gerneratedLink.style.display="block";
+          navigator.clipboard.writeText(text.textContent)
+            .then(() => {
+              alert('Text copied to clipboard');
+            })
+            .catch(err => {
+              alert('Error in copying text: ', err);
+            });
         };
       </script>
+      <p><a href="https://calendar.google.com" target="_blank"><img src="https://fonts.gstatic.com/s/i/productlogos/calendar_2020q4/v13/web-64dp/logo_calendar_2020q4_color_2x_web_64dp.png" alt="Google Calendar" width="48" height="48"></a>
+         <a href="https://outlook.live.com/calendar/" target="_blank"><img src="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/assets/brand-icons/product/png/outlook_48x1.png" alt="Microsoft Outlook Calendar" width="48" height="48"></a>
+         <a href="https://www.icloud.com/calendar/" target="_blank"><img src="https://help.apple.com/assets/63C0769366852379B8186C62/63C0769866852379B8186C6A/en_AU/941b3852f089696217cabe420c7a459f.png" alt="Apple Calendar" width="48" height="48"></a></p>
+      <p>Depending on which calendar service you choose to use, it may take an hour or so to initially populate. Most duplicate events and time corrections have been addressed using this service, but if you come across any issues, please contact a company geek with details to be addressed.</p>
+      <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>.</p>
+      <p>Depending on your calendar service, some may only update the Air Maestro calendar once every 24hrs. This shouldn't be an issue as anything within this time is likely to have been notified to you via text message. There is a Google Apps Scripts that I've come across that may allow you speed up the sync time and integrate the Air Maestro calendar with existing Google Calendars but it's not for beginners. If you're interested, please refer to <a href="https://github.com/derekantrican/GAS-ICS-Sync" target="_blank">Google Apps Script</a>.</p>
+      <p>If you're not a part of the Google ecosystem, my skills with Apple products is limited but I'm always willing to give it a go... Just know, I promise nothing!</p>
     </div>
   </body>
 </html>
