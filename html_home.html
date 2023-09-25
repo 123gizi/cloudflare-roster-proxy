@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Roster Workaround</title>
+    <title>Roster Access Project</title>
     <link rel="icon" href="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxzdmcgdmlld0JveD0iMCAwIDY0IDY0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxnIGlkPSJHbHlwaCI+PGcgZGF0YS1uYW1lPSJHbHlwaCIgaWQ9IkdseXBoLTIiPjxjaXJjbGUgY3g9IjQyIiBjeT0iNTEiIHI9IjEiLz48cGF0aCBkPSJNNTEuOTEsMzIuNzMsMjIsNTBIMzhhMSwxLDAsMCwxLDAsMkgxMWExLDEsMCwwLDEsMC0yaDcuODRsLTQuOTMtOC41NGExLjc5LDEuNzksMCwwLDEsMS4yOS0yLjY0bDIuNDYtLjM1YTEuNzQsMS43NCwwLDAsMSwxLjc5Ljg3TDIxLDQybDYtMy40Ny05LjcyLTkuMjhBMi4zOSwyLjM5LDAsMCwxLDE4LDI1LjUyYTMuODksMy44OSwwLDAsMSw0LjI0LjIzbDExLjg4LDguNzNMNDMuNTMsMjlhNi40Miw2LjQyLDAsMCwxLDguNzUsMi4zNEExLDEsMCwwLDEsNTEuOTEsMzIuNzNaIi8+PHBhdGggZD0iTTU0LDZINTFWNS41YTMuNSwzLjUsMCwwLDAtNywwVjZIMzUuNVY1LjVhMy41LDMuNSwwLDAsMC03LDBWNkgyMFY1LjVhMy41LDMuNSwwLDAsMC03LDBWNkgxMGE1LDUsMCwwLDAtNSw1VjU3YTUsNSwwLDAsMCw1LDVINTRhNSw1LDAsMCwwLDUtNVYxMUE1LDUsMCwwLDAsNTQsNlptLTgtLjVhMS41LDEuNSwwLDAsMSwzLDB2NGExLjUsMS41LDAsMCwxLTMsMFptLTE1LjUsMGExLjUsMS41LDAsMCwxLDMsMHY0YTEuNSwxLjUsMCwwLDEtMywwWk0xNSw1LjVhMS41LDEuNSwwLDAsMSwzLDB2NGExLjUsMS41LDAsMCwxLTMsMFpNNDgsNTQuNTlWNTBhMywzLDAsMCwxLDMtM2g0LjU5Wk01Nyw0NGExLDEsMCwwLDEtMSwxSDUxYTUsNSwwLDAsMC01LDV2NWExLDEsMCwwLDEtMSwxbC0zNS0uMDZhMywzLDAsMCwxLTMtM1YyMEg1N1oiLz48L2c+PC9nPjwvc3ZnPg==">
     <style type="text/css"> 
       h1 {
@@ -21,6 +21,26 @@
         border-radius: 0.5em;
         box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
       }
+      .collapsible {
+      background-color: #777;
+      color: white;
+      cursor: pointer;
+      padding: 18px;
+      width: 100%;
+      border: none;
+      text-align: centre;
+      outline: none;
+      font-size: 15px;
+      }
+      .content {
+      padding: 0 18px;
+      display: none;
+      overflow: hidden;
+      background-color: #f1f1f1;
+      }
+      .active, .collapsible:hover {
+      background-color: #555;
+      }
       a:link, a:visited { color: #6911Ff; text-decoration: none;}
       @media (max-width: 700px)
         { div { margin: 0 auto; width: auto;}}
@@ -28,9 +48,10 @@
   </head>
   <body>
     <div id="main">
-      <h1>Welcome to the roster workaround</h1>
-      <p>You can generate your personal Air Maestro External Link by scrolling to the bottom of the Schedule page of Air Maestro.</p>
-      <p>Paste the external link from Air Maestro in the field below and click "Generate". You will see the full link that you require for use in whichever calendar service you choose. This link will also be copied to your clipboard to assist with adding it to a calendar service.</p>
+      <h1>Roster Access Project</h1>
+      <p>You can generate your personal Air Maestro External Link by scrolling to the bottom of the Schedule page once you log into Air Maestro.</p>
+      <p>Copy the External Link from Air Maestro and paste it in the field below and click "Generate". A new link that you need to use in any calendar service you choose.</p>
+      <p><mark><b>Note:</b> This new link will be copied to your clipboard to help adding it to your calendar service.</mark></p>
 
       <form id="myform">
         <label for="amLink">Paste Air Maestro External Link Here:</label><br>
@@ -55,10 +76,72 @@
       <p><a href="https://calendar.google.com" target="_blank"><img src="https://fonts.gstatic.com/s/i/productlogos/calendar_2020q4/v13/web-64dp/logo_calendar_2020q4_color_2x_web_64dp.png" alt="Google Calendar" width="48" height="48"></a>
          <a href="https://outlook.live.com/calendar/" target="_blank"><img src="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/assets/brand-icons/product/png/outlook_48x1.png" alt="Microsoft Outlook Calendar" width="48" height="48"></a>
          <a href="https://www.icloud.com/calendar/" target="_blank"><img src="https://help.apple.com/assets/63C0769366852379B8186C62/63C0769866852379B8186C6A/en_AU/941b3852f089696217cabe420c7a459f.png" alt="Apple Calendar" width="48" height="48"></a></p>
-      <p>Depending on which calendar service you choose to use, it may take an hour or so to initially populate. Most duplicate events and time corrections have been addressed using this service, but if you come across any issues, please contact a company geek with details to be addressed.</p>
-      <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>.</p>
-      <p>Depending on your calendar service, some may only update the Air Maestro calendar once every 24hrs. This shouldn't be an issue as anything within this time is likely to have been notified to you via text message. There is a Google Apps Scripts that I've come across that may allow you speed up the sync time and integrate the Air Maestro calendar with existing Google Calendars but it's not for beginners. If you're interested, please refer to <a href="https://github.com/derekantrican/GAS-ICS-Sync" target="_blank">Google Apps Script</a>.</p>
-      <p>If you have any questions regarding how this workaround is built, feel free to review the code on GitHub.<br><a href="https://github.com/123gizi/cloudflare-roster-proxy" target="_blank"><img src="data:image/svg+xml,%3Csvg%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Ccircle%20cx%3D%2214%22%20cy%3D%2214%22%20r%3D%2213.346%22%20fill%3D%22%23F5F5F5%22%20stroke%3D%22%23DDD%22%20stroke-width%3D%221.308%22%2F%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M14%205.6c-4.64%200-8.4%203.855-8.4%208.614%200%203.808%202.408%207.033%205.744%208.176.418.079.573-.186.573-.418%200-.207-.005-.746-.01-1.465-2.336.518-2.832-1.153-2.832-1.153-.381-.994-.933-1.264-.933-1.264-.763-.534.057-.523.057-.523.84.063%201.289.888%201.289.888.748%201.317%201.965.936%202.444.714.078-.555.294-.936.531-1.153-1.861-.211-3.82-.951-3.82-4.251%200-.942.324-1.708.866-2.311-.088-.222-.377-1.095.077-2.28%200%200%20.706-.232%202.31.884A7.962%207.962%200%200%201%2014%209.767a7.99%207.99%200%200%201%202.104.29c1.604-1.115%202.31-.882%202.31-.882.459%201.184.17%202.062.082%202.279.537.603.862%201.37.862%202.31%200%203.311-1.965%204.035-3.837%204.252.3.265.572.794.572%201.597%200%201.153-.01%202.079-.01%202.364%200%20.233.15.497.578.413%203.336-1.143%205.739-4.368%205.739-8.17%200-4.765-3.76-8.62-8.4-8.62Z%22%20fill%3D%22%23191717%22%2F%3E%3C%2Fsvg%3E" alt="GitHub Logo" width="48" height="48"></a></p>
+        <h2>Air Maestro via Okta has the final say!</h2>
+        <p>The information below will provide additional information about this project but remember that Air Maestro via Okta along with any calls or messages from Operations has the final say. This should reflect any changes within Air Maestro but remember it may take up to 24 hours depending on the calendar service you subscribe to. It’s an additional tool to make everyone’s life easier with checking the roster for next weekends party plans but I will not accept any responsibility for anyone missing or running late for shifts.</p>
+        <button type="button" class="collapsible"><b>What this link does</b></button>
+        <div class="content">
+          <p>This Project retrieves your calendar from Air Maestro and adjusts the following;
+            <ul>
+              <li>All times zones for each event is adjusted to UTC,</li>
+              <li>Duplicate Leave types removed,</li>
+              <li>Duplicate Day Off types removed,</li>
+              <li>Duplicate Standby events removed,</li>
+              <li>Duplicate Admin events removed,</li>
+              <li>Assigned Base events removed.</li>
+            </ul>
+          </p>
+        </div>
+        <p></p>
+        <button type="button" class="collapsible"><b>FAQs</b></button>
+        <div class="content">
+          <p>
+            <ul>
+              <li>Each update request from your calendar service is retrieved, filtered and pushed to calendar,</li>
+              <li>Nothing is saved within this online project,</li>
+              <li>Event start times will display in your local calendar time – If you have a 0600H sign on in Broome but your phone is still on Darwin Time, the event will show as 0730I/K until your phone clock updates to WA,</li>
+              <li>If you generate a new link in Air Maestro – you will need to generate a new link with this website,</li>
+              <li>Depending on your calendar service, it may take a short time to initially populate with events (anywhere from 5 minutes to 1 hour),</li>
+              <li>Updates may occur only once every 24 hours but depending on your calendar service, this is likely closer to every 6 hours.</li>
+            </ul>
+          I have adjusted this to suite the many but if you have any suggestions or things that could be improved, please let me know.</p>
+        </div>
+      <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>, but eventually updated instructions will be provided below for use with Outlook Web and Google Calendar.</p>
+      <p><mark><b>Note:</b> Currently adding an external calendar to the using a <u>company managed Outlook Desktop program is not supported</u>.</mark></p>
+      <p>The calendar will show up in the Desktop version shortly after adding the external subscription using the Outlook Web method.</p>
+        <button type="button" class="collapsible"><b>Outlook Online Web App</b></button>
+        <div class="content">
+          <p>
+            <ul>
+              <li>UPDATED INSTRUCTIONS WILL GO HERE</li>
+            </ul>
+          </p>
+        </div>
+        <p></p>
+        <button type="button" class="collapsible"><b>Google Calendar</b></button>
+        <div class="content">
+          <p>
+            <ul>
+              <li>UPDATED INSTRUCTIONS WILL GO HERE</li>
+            </ul>
+          </p>
+        </div>
+      <p>If you have any questions regarding how this workaround is built, feel free to review the code on <a href="https://github.com/123gizi/cloudflare-roster-proxy" target="_blank">GitHub</a> and if you’re interested in a faster sync option for use with Google Calendars, you can check out this <a href="https://github.com/derekantrican/GAS-ICS-Sync" target="_blank">Google Apps Script</a> - but it’s not for beginners and not without additional difficulties.</p>
+      <script>
+      var coll = document.getElementsByClassName("collapsible");
+      var i;
+
+      for (i = 0; i < coll.length; i++) {
+        coll[i].addEventListener("click", function() {
+          this.classList.toggle("active");
+          var content = this.nextElementSibling;
+          if (content.style.display === "block") {
+            content.style.display = "none";
+          } else {
+            content.style.display = "block";
+          }
+        });
+      }
+      </script>
     </div>
   </body>
 </html>
