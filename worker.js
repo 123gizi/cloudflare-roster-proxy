@@ -26,10 +26,14 @@ export default {
     let targetUrl = searchParams.get('url');
 
     if (targetUrl != null ){
-      if (targetUrl.startsWith('webcals://')) {
+      if (targetUrl.startsWith('webcals://airmaestro.cobhamspecialmission.com.au')) {
+        targetUrl = 'https://airmaestro.surveillanceaustralia' + targetUrl.slice('webcals://airmaestro.cobhamspecialmission'.length);
+      } else if (targetUrl.startsWith('https://airmaestro.cobhamspecialmission.com.au')) {
+        targetUrl = 'https://airmaestro.surveillanceaustralia' + targetUrl.slice('https://airmaestro.cobhamspecialmission'.length);
+      } else if (targetUrl.startsWith('webcals://')) {
         targetUrl = 'https://' + targetUrl.slice('webcals://'.length);
       }
-      const allowed = 'airmaestro.cobhamspecialmission.com.au';
+      const allowed = 'airmaestro.surveillanceaustralia.com.au';
       let approvedUrl = targetUrl;
       if (approvedUrl.startsWith(allowed, 8)) {
         approvedUrl = targetUrl;
