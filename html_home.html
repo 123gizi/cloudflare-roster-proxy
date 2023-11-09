@@ -32,6 +32,12 @@
       outline: none;
       font-size: 15px;
       }
+      .icons {
+      text-align: center;
+      }
+      img {
+      padding: 0px 10px 0px 10px;
+      }
       .content {
       padding: 0 18px;
       display: none;
@@ -51,19 +57,28 @@
       <h1>Roster Access Project</h1>
       <p>You can generate your personal Air Maestro External Link by scrolling to the bottom of the Schedule page once you log into Air Maestro.</p>
       <p>Copy the External Link from Air Maestro and paste it in the field below and click "Generate". A new link that you need to use in any calendar service you choose.</p>
-      <p><mark><b>Note:</b> This new link will be copied to your clipboard to help adding it to your calendar service.</mark></p>
-
+      <p><mark><b>Note:</b> This new link will be copied to your clipboard to assist with adding it to your calendar service.</mark></p>
       <form id="myform">
         <label for="amLink">Paste Air Maestro External Link Here:</label><br>
         <input type="text" id="amLink" name="amLink" size="50"><br><br>
         <button type="button" id="generateBtn">Generate</button>
       </form>
       <div id="gerneratedLink" style="display: none; word-wrap: anywhere; border: 1px solid #ccc"></div><br>
+      <div class="icons">
+        <a id="google" href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Google_Calendar.svg" alt="Google Calendar" width="48" height="48"></a>
+        <a id="outlook" href="https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&url=" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/MS_Outlook.svg" alt="Personal M365" width="48" height="48"></a>
+        <a id="apple" href="https://www.icloud.com/calendar/" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Apple_Calendar_macOS_round.png" alt="Apple Calendar" width="48" height="48"></a>
+        <a id="leidos" href="https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&url="+"something" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Leidos-Logo-uv-mid.png" alt="Leidos M365" width="121" height="48"></a>
+      </div>
       <script>
         let text = document.getElementById('gerneratedLink');
         generateBtn.onclick = function generateLink(){
           text.textContent = window.location.toString() + "?url=" + document.getElementById('amLink').value;
           gerneratedLink.style.display="block";
+          
+          document.getElementById("outlook").href = "https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&url=" + text.textContent;
+          document.getElementById("leidos").href = "https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&url=" + text.textContent;
+          
           navigator.clipboard.writeText(text.textContent)
             .then(() => {
               alert('Text copied to clipboard');
@@ -73,9 +88,6 @@
             });
         };
       </script>
-      <p><a href="https://calendar.google.com" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Google_Calendar.svg" alt="Google Calendar" width="48" height="48"></a>
-         <a href="https://outlook.live.com/calendar/" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/MS_Outlook.svg" alt="Microsoft Outlook Calendar" width="48" height="48"></a>
-         <a href="https://www.icloud.com/calendar/" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Apple_Calendar_macOS_round.png" alt="Apple Calendar" width="48" height="48"></a></p>
         <h2>Air Maestro via Okta has the final say!</h2>
         <p>The information below will provide additional information about this project but remember that Air Maestro via Okta along with any calls or messages from Operations has the final say. This should reflect any changes within Air Maestro but remember it may take up to 24 hours depending on the calendar service you subscribe to. It’s an additional tool to make everyone’s life easier with checking the roster for next weekends party plans but I will not accept any responsibility for anyone missing or running late for shifts.</p>
         <button type="button" class="collapsible"><b>What this link does</b></button>
@@ -105,10 +117,9 @@
             </ul>
           I have adjusted this to suite the many but if you have any suggestions or things that could be improved, please let me know.</p>
         </div>
-      <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>, but eventually updated instructions will be provided below for use with Outlook Web and Google Calendar.</p>
-      <p><mark><b>Note:</b> Currently adding an external calendar to the using a <u>company managed Outlook Desktop program is not supported</u>.</mark></p>
-      <p>The calendar will show up in the Desktop version shortly after adding the external subscription using the Outlook Web method.</p>
-        <button type="button" class="collapsible"><b>Outlook Online Web App</b></button>
+      <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>, but if required updated instructions can be provided below for use with Outlook Web and Google Calendar.</p>
+      <p><mark><b>Note:</b> Currently adding external calendars using a <u>company managed Outlook Desktop application is not supported</u> but will show up there shortly after adding it using the web version.</mark></p>
+        <button type="button" class="collapsible" hidden><b>Outlook Online Web App</b></button>
         <div class="content">
           <p>
             <ul>
@@ -117,7 +128,7 @@
           </p>
         </div>
         <p></p>
-        <button type="button" class="collapsible"><b>Google Calendar</b></button>
+        <button type="button" class="collapsible" hidden><b>Google Calendar</b></button>
         <div class="content">
           <p>
             <ul>
