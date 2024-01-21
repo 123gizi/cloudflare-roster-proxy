@@ -109,6 +109,7 @@ export default {
     body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
     body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
+    body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
 
     //Remove additional spaces left over after AM removes unauthorised data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
@@ -156,8 +157,8 @@ export default {
         }
       });
       //Combine the header, footer, and modified event data
-      //const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
-      const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
+      const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
+      //const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
       body = modifiedFileContent
     }
