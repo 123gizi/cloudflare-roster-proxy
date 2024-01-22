@@ -109,8 +109,8 @@ export default {
     if (overlapParams == "false") {
       const header = body.split("BEGIN:VEVENT")[0]; //Extract the header (everything before the first "BEGIN:VEVENT")
       const modifiedEvents = []; //Array to store modified events. Used to preserve event order purely for easy before/after text comparison
-      const events = body.split("END:VEVENT"); //Split the data by events
-      //events.pop(); //Remove the last element which is an empty string
+      const events = body.split("BEGIN:VEVENT"); //Split the data by events
+      events.shift(); //Removes the first element which is the header
       events.forEach((eventData) => {
         //Extract start/end times for later processing
         const dtstartMatch = eventData.match(/DTSTART;TZID=Etc\/UTC:(\d{8}T\d{6})/);
@@ -131,7 +131,7 @@ export default {
             const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
             const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
             modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Modify travel events to start 45 minutes earlier and finish 15 minutes later - reflect general sign-on times
           else if (eventData.includes("DESCRIPTION:TRAVEL")) {
@@ -140,31 +140,30 @@ export default {
             const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
             const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
             modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Change events longer than 23 hours to be All Day events based on end date - RECENCY Specific as AM issues time for these in local.
           else if (((dtend - dtstart) > 23 * 60 * 60 * 1000) && (eventData.includes("SUMMARY:Scheduled Recency"))) {
             const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
             modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
                 .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Change events longer than 23 hours to be All Day events based on end date - NOT RECENCY
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
             modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
                 .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Preserve all other events
           else {
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
         }
       });
-      //Combine the header, footer, and modified event data
-      //const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
-      const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
+      //Combine the header and modified event data
+      const modifiedFileContent = header + modifiedEvents.join("");
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
       body = modifiedFileContent;
     }
