@@ -24,9 +24,8 @@ export default {
     };
     const { searchParams } = new URL(request.url);
     let targetUrl = searchParams.get('url');
-    let overlapParams = searchParams.get('overlap'); //Do you want your shift to overlay with the duty rostered?
     let newDate = new Date(Date.now());
-    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl} - overlap=${overlapParams}`);
+    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl}`);
 
     if (targetUrl != null ){
       if (targetUrl.startsWith('webcals://airmaestro.cobhamspecialmission.com.au')) {
@@ -41,8 +40,8 @@ export default {
       if (approvedUrl.startsWith(allowed, 8)) {
         approvedUrl = targetUrl;
         //Unsure if Headers for fetch do anything
-        let response = await fetch(approvedUrl, init_approved);
-        //let response = await fetch(approvedUrl);
+        //let response = await fetch(approvedUrl, init_approved);
+        let response = await fetch(approvedUrl);
         let { readable, writable } = new TransformStream();
         streamBody(response.body, writable);
 
@@ -101,70 +100,14 @@ export default {
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LVR - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - ABF[\s\S]+?END:VEVENT/g, "")
-
-    //Truncate common event names
-    body = body.replace(/SUMMARY:RDO - Rostered Day Off/g, "SUMMARY:RDO")
-    body = body.replace(/SUMMARY:DDO - Destination Day Off/g, "SUMMARY:DDO")
-    body = body.replace(/SUMMARY:LDO - Locked-in Day Off/g, "SUMMARY:LDO")
-    body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
-    body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
-    body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LWOP - ABF[\s\S]+?END:VEVENT/g, "")
 
     //Remove additional spaces left over after AM removes unauthorised data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
     body = body.replace(/&nbsp\\;/gms, " ")
 
-//IF function overlapParams == "false" run JT minimise code
-    if (overlapParams == "false") {
-      const header = body.split("BEGIN:VEVENT")[0]; //Extract the header (everything before the first "BEGIN:VEVENT")
-      const modifiedEvents = []; //Array to store modified events. Used to preserve event order purely for easy before/after text comparison
-      const events = body.split("END:VEVENT"); //Split the data by events
-      events.pop(); //Remove the last element which is an empty string
-      events.forEach((eventData) => {
-        //Extract start/end times for later processing
-        const dtstartMatch = eventData.match(/DTSTART;TZID=Etc\/UTC:(\d{8}T\d{6})/);
-        const dtendMatch = eventData.match(/DTEND;TZID=Etc\/UTC:(\d{8}T\d{6})/);
-
-        if (dtstartMatch && dtendMatch) {
-          const dtstart = new Date(dtstartMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
-          const dtend = new Date(dtendMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
-          let modifiedEventData = eventData;
-          //Remove overlapping roster events (keep Travel without flight bookings) - Skip adding these events to modifiedEvents
-          if (eventData.includes("DESCRIPTION: ABF - ABF") || eventData.includes("DESCRIPTION: TVL - Travel")) {
-            return;
-          }
-          //Modify past and future flight events to start 2 hours earlier and finish 30 minutes later - reflect general sign-on times
-          if (eventData.includes("DESCRIPTION:ABF - Planned") || eventData.includes("DESCRIPTION:ABF - Partial") || eventData.includes("DESCRIPTION:ABF - Complete")) {
-            dtstart.setHours(dtstart.getHours() - 2);
-            dtend.setMinutes(dtend.getMinutes() + 30);
-            const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
-          }
-          //Change events longer than 23 hours to be All Day events based on end date
-          else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
-            const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
-                .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
-          }
-          //Preserve all other events
-          else {
-            modifiedEvents.push(modifiedEventData + "END:VEVENT");
-          }
-        }
-      });
-      //Combine the header, footer, and modified event data
-      //const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
-      const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
-      //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
-      body = modifiedFileContent
-    }
-
     await writer.write(encoder.encode(body))
     await writer.close()
-
   }
   },
 };
