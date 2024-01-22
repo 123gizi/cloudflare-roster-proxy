@@ -61,7 +61,7 @@ export default {
     }
 
     //Adding a Name to the calendar and a suggested publish limit of no more than 1 hour
-    body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H")
+    body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H\nBEGIN:VEVENT\nDESCRIPTION:This project was last updated on the 22nd January 2024\nDTSTAMP:20240101T113000Z\nDTSTART;VALUE=DATE:20240101\nSUMMARY:AM Project\nUID:20240101T000000Z-40712\nEND:VEVENT")
 
     //Time logged for testing
     body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
@@ -163,10 +163,9 @@ export default {
         }
       });
       //Combine the header, footer, and modified event data
-      //const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
-      const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
-      //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
-      body = modifiedFileContent;
+      const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
+      const finalFileContent = modifiedFileContent.replace(/^\s*[\r\n]/gm, ""); //Remove any blank lines
+      body = finalFileContent;
     }
 
     await writer.write(encoder.encode(body))
