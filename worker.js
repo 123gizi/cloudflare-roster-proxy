@@ -8,14 +8,6 @@ export default {
         "content-type": "text/html; charset=UTF-8",
       },
     };
-    const init_approved = {
-      headers: {
-        "content-type": "text/calendar; charset=UTF-8",
-        "connection": "close",
-      },
-      method: "GET",
-      cf: { cacheTtl: 5 }
-    };
     const init_denied = {
       headers: {
         "content-type": "text/html; charset=UTF-8",
@@ -25,7 +17,8 @@ export default {
     const { searchParams } = new URL(request.url);
     let targetUrl = searchParams.get('url');
     let overlapParams = searchParams.get('overlap'); //Do you want your shift to overlay with the duty rostered?
-    let newDate = new Date(Date.now());
+    //const overlapParams = "false"; //running improvements as default.
+    const newDate = new Date(Date.now());
     console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl} - overlap=${overlapParams}`);
 
     if (targetUrl != null ){
@@ -40,9 +33,7 @@ export default {
       let approvedUrl = targetUrl;
       if (approvedUrl.startsWith(allowed, 8)) {
         approvedUrl = targetUrl;
-        //Unsure if Headers for fetch do anything
-        let response = await fetch(approvedUrl, init_approved);
-        //let response = await fetch(approvedUrl);
+        let response = await fetch(approvedUrl);
         let { readable, writable } = new TransformStream();
         streamBody(response.body, writable);
 
@@ -61,9 +52,6 @@ export default {
     const decoder = new TextDecoder('utf-8');
     const encoder = new TextEncoder('utf-8');
 
-    //let newDate = new Date(Date.now());
-    //console.log(`${newDate.toDateString()} ${newDate.toTimeString()}`);
-
     let body = ''
     while (true) {
       const { done, value } = await reader.read()
@@ -76,10 +64,12 @@ export default {
     body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H")
 
     //Time logged for testing
-    //body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
+    body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
 
     //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
     body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
+    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:")
+    body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
     //Filters to be used to remove some duplication of information inherent in AM
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STANDBY[\s\S]+?END:VEVENT/g, "")
@@ -109,17 +99,18 @@ export default {
     body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
     body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
+    body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
 
     //Remove additional spaces left over after AM removes unauthorised data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
     body = body.replace(/&nbsp\\;/gms, " ")
 
-//IF function overlapParams == "false" run JT minimise code
+//IF function overlapParams == "false" run simplified content and combine some events. Remove as IF function and set as default once working without issue.
     if (overlapParams == "false") {
       const header = body.split("BEGIN:VEVENT")[0]; //Extract the header (everything before the first "BEGIN:VEVENT")
       const modifiedEvents = []; //Array to store modified events. Used to preserve event order purely for easy before/after text comparison
       const events = body.split("END:VEVENT"); //Split the data by events
-      events.pop(); //Remove the last element which is an empty string
+      //events.pop(); //Remove the last element which is an empty string
       events.forEach((eventData) => {
         //Extract start/end times for later processing
         const dtstartMatch = eventData.match(/DTSTART;TZID=Etc\/UTC:(\d{8}T\d{6})/);
@@ -142,7 +133,23 @@ export default {
             modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
             modifiedEvents.push(modifiedEventData + "END:VEVENT");
           }
-          //Change events longer than 23 hours to be All Day events based on end date
+          //Modify travel events to start 45 minutes earlier and finish 15 minutes later - reflect general sign-on times
+          else if (eventData.includes("DESCRIPTION:TRAVEL")) {
+            dtstart.setMinutes(dtstart.getMinutes() - 45);
+            dtend.setMinutes(dtend.getMinutes() + 15);
+            const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
+            const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
+            modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
+            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+          }
+          //Change events longer than 23 hours to be All Day events based on end date - RECENCY Specific as AM issues time for these in local.
+          else if (((dtend - dtstart) > 23 * 60 * 60 * 1000) && (eventData.includes("SUMMARY:Scheduled Recency"))) {
+            const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
+            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
+                .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
+            modifiedEvents.push(modifiedEventData + "END:VEVENT");
+          }
+          //Change events longer than 23 hours to be All Day events based on end date - NOT RECENCY
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
             modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
@@ -159,7 +166,7 @@ export default {
       //const modifiedFileContent = header + modifiedEvents.join("") + "\nEND:VCALENDAR";
       const modifiedFileContent = modifiedEvents.join("") + "\nEND:VCALENDAR";
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
-      body = modifiedFileContent
+      body = modifiedFileContent;
     }
 
     await writer.write(encoder.encode(body))
