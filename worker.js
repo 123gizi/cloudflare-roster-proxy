@@ -100,6 +100,7 @@ export default {
     body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
     body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
+    body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
 
     //Remove additional spaces left over after AM removes unauthorised data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
@@ -115,7 +116,6 @@ export default {
         //Extract start/end times for later processing
         const dtstartMatch = eventData.match(/DTSTART;TZID=Etc\/UTC:(\d{8}T\d{6})/);
         const dtendMatch = eventData.match(/DTEND;TZID=Etc\/UTC:(\d{8}T\d{6})/);
-
         if (dtstartMatch && dtendMatch) {
           const dtstart = new Date(dtstartMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
           const dtend = new Date(dtendMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
@@ -164,9 +164,9 @@ export default {
       });
       //Combine the header and modified event data
       const modifiedFileContent = header + modifiedEvents.join("");
-      const finalFileContent =  modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
+      const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
-      body = modifiedFileContent;
+      body = finalFileContent;
     }
 
     await writer.write(encoder.encode(body))
