@@ -164,6 +164,7 @@ export default {
       });
       //Combine the header and modified event data
       const modifiedFileContent = header + modifiedEvents.join("");
+      const finalFileContent =  modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
       body = modifiedFileContent;
     }
