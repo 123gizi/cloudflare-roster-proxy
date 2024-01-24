@@ -16,11 +16,12 @@ export default {
     };
     const { searchParams } = new URL(request.url);
     let targetUrl = searchParams.get('url');
-    let overlapParams = searchParams.get('overlap'); //Do you want your shift to overlay with the duty rostered?
-    //const overlapParams = "false"; //running improvements as default.
+    let overlapParams = searchParams.get('overlap'); //Do you want your duty shift to combine with the tasking rostered?
+    //const overlapParams = "false"; //Can be use to run additional changes and merge duty and taskings by default - TBC
     const newDate = new Date(Date.now());
-    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl} - overlap=${overlapParams}`);
+    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl} - overlap=${overlapParams}`); //Used for troubleshooting and monitoring worker requests
 
+    //Only allowed URLs may be used with this worker. Allowance made for domain change in 2023 for the roster service.
     if (targetUrl != null ){
       if (targetUrl.startsWith('webcals://airmaestro.cobhamspecialmission.com.au')) {
         targetUrl = 'https://airmaestro.surveillanceaustralia' + targetUrl.slice('webcals://airmaestro.cobhamspecialmission'.length);
@@ -60,18 +61,18 @@ export default {
       body += decoder.decode(value)
     }
 
-    //Adding a Name to the calendar and a suggested publish limit of no more than 1 hour
+    //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
     body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H")
 
-    //Time logged for testing
-    body = body.replaceAll("Custom Fields:", "Custom Fields: Last Checked @ " + newDate)
+    //Time logged within tasking events for testing
+    //body = body.replaceAll("Custom Fields:","/nCustom Fields: Last Checked @ " + newDate)
 
     //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
     body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
     body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:")
     body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
-    //Filters to be used to remove some duplication of information inherent in AM
+    //Filters to be used to remove duplicate information inherent in AM
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STANDBY[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
@@ -92,7 +93,7 @@ export default {
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - ABF[\s\S]+?END:VEVENT/g, "")
 
-    //Truncate common event names
+    //Truncate common event names to simplify output
     body = body.replace(/SUMMARY:RDO - Rostered Day Off/g, "SUMMARY:RDO")
     body = body.replace(/SUMMARY:DDO - Destination Day Off/g, "SUMMARY:DDO")
     body = body.replace(/SUMMARY:LDO - Locked-in Day Off/g, "SUMMARY:LDO")
@@ -102,11 +103,11 @@ export default {
     body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
     body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
 
-    //Remove additional spaces left over after AM removes unauthorised data for user
+    //Remove additional spaces left over after AM removes unpublished data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
     body = body.replace(/&nbsp\\;/gms, " ")
 
-//IF function overlapParams == "false" run simplified content and combine some events. Remove as IF function and set as default once working without issue.
+//To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
     if (overlapParams == "false") {
       const header = body.split("BEGIN:VEVENT")[0]; //Extract the header (everything before the first "BEGIN:VEVENT")
       const modifiedEvents = []; //Array to store modified events. Used to preserve event order purely for easy before/after text comparison
@@ -120,11 +121,11 @@ export default {
           const dtstart = new Date(dtstartMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
           const dtend = new Date(dtendMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
           let modifiedEventData = eventData;
-          //Remove overlapping roster events (keep Travel without flight bookings) - Skip adding these events to modifiedEvents
+          //Remove overlapping rostered duty events (tasking / RPT details adjusted to reflect sign-on/off times below) - Skips adding these events to modifiedEvents
           if (eventData.includes("DESCRIPTION: ABF - ABF") || eventData.includes("DESCRIPTION: TVL - Travel")) {
             return;
           }
-          //Modify past and future flight events to start 2 hours earlier and finish 30 minutes later - reflect general sign-on times
+          //Modify past and future tasking events to start 2 hours earlier and finish 30 minutes later - reflect general sign-on times
           if (eventData.includes("DESCRIPTION:ABF - Planned") || eventData.includes("DESCRIPTION:ABF - Partial") || eventData.includes("DESCRIPTION:ABF - Complete")) {
             dtstart.setHours(dtstart.getHours() - 2);
             dtend.setMinutes(dtend.getMinutes() + 30);
@@ -133,7 +134,7 @@ export default {
             modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
-          //Modify travel events to start 45 minutes earlier and finish 15 minutes later - reflect general sign-on times
+          //Modify RPT events to start 45 minutes earlier and finish 15 minutes later - reflect general sign-on times
           else if (eventData.includes("DESCRIPTION:TRAVEL")) {
             dtstart.setMinutes(dtstart.getMinutes() - 45);
             dtend.setMinutes(dtend.getMinutes() + 15);
@@ -149,7 +150,7 @@ export default {
                 .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
-          //Change events longer than 23 hours to be All Day events based on end date - NOT RECENCY
+          //Change events longer than 23 hours to be All Day events based on end date - anything else NOT RECENCY
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
             modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
@@ -165,7 +166,7 @@ export default {
       //Combine the header and modified event data
       const modifiedFileContent = header + modifiedEvents.join("");
       const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
-      //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, "");
+      //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, ""); //When used it results in some Descriptions within events becoming corrupted.
       body = finalFileContent;
     }
 
