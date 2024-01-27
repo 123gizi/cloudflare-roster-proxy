@@ -16,10 +16,12 @@ export default {
     };
     const { searchParams } = new URL(request.url);
     let targetUrl = searchParams.get('url');
-    let overlapParams = searchParams.get('overlap'); //Do you want your duty shift to combine with the tasking rostered?
-    //const overlapParams = "false"; //Can be use to run additional changes and merge duty and taskings by default - TBC
+    //let overlapParams = searchParams.get('overlap'); //Do you want your duty shift to combine with the tasking rostered?
+    const overlapParams = "false"; //Can be use to run additional changes and merge duty and taskings by default - TBC
+    let updateParams = searchParams.get('hideupdate'); //Can be used to hide update time from DESCRIPTION if required
     const newDate = new Date(Date.now());
-    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl} - overlap=${overlapParams}`); //Used for troubleshooting and monitoring worker requests
+    const syncTime = newDate.toUTCString();
+    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl}`); //Used for troubleshooting and monitoring worker requests
 
     //Only allowed URLs may be used with this worker. Allowance made for domain change in 2023 for the roster service.
     if (targetUrl != null ){
@@ -62,10 +64,7 @@ export default {
     }
 
     //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
-    body = body.replace("VERSION:2.0", "VERSION:2.0\nX-WR-CALNAME:Air Maestro\nX-PUBLISHED-TTL:PT1H")
-
-    //Time logged within tasking events for testing
-    //body = body.replaceAll("Custom Fields:","/nCustom Fields: Last Checked @ " + newDate)
+    body = body.replace("VERSION:2.0", "VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-PUBLISHED-TTL:PT4H")
 
     //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
     body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
@@ -105,6 +104,7 @@ export default {
 
     //Remove additional spaces left over after AM removes unpublished data for user
     body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
+    body = body.replace(/\\n\\n\\n\\n/gms, "\\n\\n")
     body = body.replace(/&nbsp\\;/gms, " ")
 
 //To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
@@ -146,14 +146,14 @@ export default {
           //Change events longer than 23 hours to be All Day events based on end date - RECENCY Specific as AM issues time for these in local.
           else if (((dtend - dtstart) > 23 * 60 * 60 * 1000) && (eventData.includes("SUMMARY:Scheduled Recency"))) {
             const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
+            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
                 .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Change events longer than 23 hours to be All Day events based on end date - anything else NOT RECENCY
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}`)
+            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
                 .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
@@ -168,6 +168,9 @@ export default {
       const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
       //const finalFileContent = modifiedFileContent.replace(/^\s*\n/gm, ""); //When used it results in some Descriptions within events becoming corrupted.
       body = finalFileContent;
+    }
+    if (updateParams !== "true") {
+      body = body.replaceAll("DESCRIPTION:","DESCRIPTION:Last Roster Sync: " + syncTime + " \\n\\n\r\n "); //Time logged within events for awareness
     }
 
     await writer.write(encoder.encode(body))
