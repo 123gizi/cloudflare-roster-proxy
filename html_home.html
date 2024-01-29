@@ -90,6 +90,7 @@
       </script>
         <h2>Air Maestro via Okta has the final say!</h2>
         <p>The information below will provide additional information about this project but remember that Air Maestro via Okta along with any calls or messages from Operations has the final say. This should reflect any changes within Air Maestro but remember it may take up to 24 hours depending on the calendar service you subscribe to. It’s an additional tool to make everyone’s life easier with checking the roster for next weekends party plans but I will not accept any responsibility for anyone missing or running late for shifts.</p>
+        <p><b>Note:</b> No more overlapping events!. This means that your signon time should match the tasking event in your calendar.</br>No longer will you see a DUTY SHIFT overlapping with a TASKING SHIFT, the TASKING SHIFT has been expanded to cover both <u>as per "standard roster protocols"</u>.</p>
         <button type="button" class="collapsible"><b>What this link does</b></button>
         <div class="content">
           <p>This Project retrieves your calendar from Air Maestro and adjusts the following;
@@ -99,7 +100,11 @@
               <li>Duplicate Day Off types removed,</li>
               <li>Duplicate Standby events removed,</li>
               <li>Duplicate Admin events removed,</li>
-              <li>Assigned Base events removed.</li>
+              <li>Assigned Base events removed,</li>
+              <li>All Day events such as RDOs formated correctly,</li>
+              <li>Event names simplified eg,"RDO - Rostered Day Off", now "RDO",</li>
+              <li>Recency events displayed correctly for the specific day eg, Night Surv ,</li>
+              <li>Time Stamp of last Roster Sync between your calendar and Air Maestro added as the first line of all events for awareness.</li>
             </ul>
           </p>
         </div>
@@ -113,10 +118,23 @@
               <li>Event start times will display in your local calendar time – If you have a 0600H sign on in Broome but your phone is still on Darwin Time, the event will show as 0730I/K until your phone clock updates to WA,</li>
               <li>If you generate a new link in Air Maestro – you will need to generate a new link with this website,</li>
               <li>Depending on your calendar service, it may take a short time to initially populate with events (anywhere from 5 minutes to 1 hour),</li>
-              <li>Updates may occur only once every 24 hours but depending on your calendar service, this is likely closer to every 6 hours.</li>
+              <li>Updates may occur only once every 24 hours but it greatly varies between calendar services (anywhere from every 4 to 18 hours).</li>
             </ul>
           I have adjusted this to suite the many but if you have any suggestions or things that could be improved, please let me know.</p>
         </div>
+        <p></p>
+        <button type="button" class="collapsible"><b>Advanced API Options</b></button>
+        <div class="content">
+          <p>If you find that the output is not to your liking or suitable for your needs, there may be a way to personalise it with the use of API parameters.
+            <ul>
+              <li>If you want your duty and tasking to show separately, append your generated URL with <b>&overlap=true</b></li>
+              <li>If you want your events to not show the time of last sync because of notifications you have already set up for changed events, append your generated URL with <b>&hideupdate=true</b></li>
+              <li>More options to come if the need calls for it...</li>
+            </ul>
+          </p>
+        </div>
+        <p></p>
+
       <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>, but if required updated instructions can be provided below for use with Outlook Web and Google Calendar.</p>
       <p><mark><b>Note:</b> Currently adding external calendars using a <u>company managed Outlook Desktop application is not supported</u> but will show up there shortly after adding it using the web version.</mark></p>
         <button type="button" class="collapsible" hidden><b>Outlook Online Web App</b></button>
