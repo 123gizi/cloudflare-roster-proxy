@@ -8,6 +8,20 @@ export default {
         "content-type": "text/html; charset=UTF-8",
       },
     };
+
+//AM 3.7.4
+    //TEMP Solutions after update
+    const cookieData = [REDACTED];
+    const init_approved = {
+      method: 'GET',
+      headers: {
+        'content-type': 'text/calendar; charset=UTF-8',
+        'Cookie': cookieData,
+      },
+      
+      //cf: { cacheTtl: 5 }
+    };
+
     const init_denied = {
       headers: {
         "content-type": "text/html; charset=UTF-8",
@@ -31,11 +45,12 @@ export default {
       } else if (targetUrl.startsWith('webcals://')) {
         targetUrl = 'https://' + targetUrl.slice('webcals://'.length);
       }
-      const allowed = 'airmaestro.surveillanceaustralia.com.au';
+      const allowed = 'airmaestro.surveillanceaustralia.com.au/api/calendar';
       let approvedUrl = targetUrl;
       if (approvedUrl.startsWith(allowed, 8)) {
         approvedUrl = targetUrl;
-        let response = await fetch(approvedUrl);
+        let response = await fetch(approvedUrl, init_approved);
+        //let response = await fetch(approvedUrl);
         let { readable, writable } = new TransformStream();
         streamBody(response.body, writable);
 
@@ -66,9 +81,9 @@ export default {
     body = body.replace("VERSION:2.0", "VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-PUBLISHED-TTL:PT2H")
 
     //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
-    body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
+    //body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
     body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:")
-    body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
+    //body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
     //Filters to be used to remove duplicate information inherent in AM
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STANDBY[\s\S]+?END:VEVENT/g, "")
@@ -98,13 +113,15 @@ export default {
     body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
     body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
+    body = body.replace(/SUMMARY:LR - Leave Requested/g, "SUMMARY:Leave Requested")
     body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
     body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
 
     //Remove additional spaces left over after AM removes unpublished data for user
-    body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
-    body = body.replace(/\\n\\n\\n\\n/gms, "\\n\\n")
-    body = body.replace(/&nbsp\\;/gms, " ")
+    //body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
+    //body = body.replace(/\\n\\n\\n\\n/gms, "\\n\\n")
+    //body = body.replace(/\\n\\n\\n/gms, "\\n\\n")
+    //body = body.replace(/&nbsp\\;/gms, " ")
 
 //To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
     if (overlapParams != "true") { //overlap
@@ -114,8 +131,8 @@ export default {
       events.shift(); //Removes the first element which is the header
       events.forEach((eventData) => {
         //Extract start/end times for later processing
-        const dtstartMatch = eventData.match(/DTSTART;TZID=Etc\/UTC:(\d{8}T\d{6})/);
-        const dtendMatch = eventData.match(/DTEND;TZID=Etc\/UTC:(\d{8}T\d{6})/);
+        const dtstartMatch = eventData.match(/DTSTART[^\n]+(\d{8}T\d{6})/);
+        const dtendMatch = eventData.match(/DTEND[^\n]+(\d{8}T\d{6})/);
         if (dtstartMatch && dtendMatch) {
           const dtstart = new Date(dtstartMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
           const dtend = new Date(dtendMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
@@ -142,18 +159,11 @@ export default {
             modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
-          //Change events longer than 23 hours to be All Day events based on end date - RECENCY Specific as AM issues time for these in local.
-          else if (((dtend - dtstart) > 23 * 60 * 60 * 1000) && (eventData.includes("SUMMARY:Scheduled Recency"))) {
-            const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
-                .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
-            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
-          }
-          //Change events longer than 23 hours to be All Day events based on end date - anything else NOT RECENCY
+          //Change events longer than 23 hours to be All Day events based on end date
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
-            const allDayDate = dtend.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART;TZID=Etc\/UTC:[^;\n]*/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
-                .replace(/DTEND;TZID=Etc\/UTC:[^;\n]*/, '');
+            const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
+            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
+                .replace(/DTEND[^\n]+(\d{8}T\d{6})/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
           //Preserve all other events
@@ -168,7 +178,9 @@ export default {
       body = finalFileContent;
     }
     if (updateParams != "true") { //hideupdate
-      body = body.replaceAll("DESCRIPTION:","DESCRIPTION:Last Roster Sync: " + syncTime + " \\n\\n\r\n "); //Time logged within events for awareness
+      //body = body.replaceAll("DESCRIPTION:","DESCRIPTION:Last Roster Sync: " + syncTime + " \\n\\n\r\n "); //Time logged within events for awareness
+      body = body.replaceAll("DESCRIPTION:", `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `);
+
     }
 
     await writer.write(encoder.encode(body))
