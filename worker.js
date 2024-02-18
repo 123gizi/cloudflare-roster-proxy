@@ -162,7 +162,7 @@ export default {
           //Change events longer than 23 hours to be All Day events based on end date
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\r`)
+            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\n`)
                 .replace(/DTEND[^\n]+(\d{8}T\d{6})/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
@@ -172,8 +172,10 @@ export default {
           }
         }
       });
+          //Removes default time zone information from header (leaves only first 6 lines)
+    const newHeader = header.split('\n').slice(0, 6).join('\n');
       //Combine the header and modified event data
-      const modifiedFileContent = header + modifiedEvents.join("");
+      const modifiedFileContent = newHeader + modifiedEvents.join("");
       const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
       body = finalFileContent;
     }
