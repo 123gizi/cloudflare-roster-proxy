@@ -79,6 +79,8 @@ export default {
 
     //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
     body = body.replace("VERSION:2.0", "VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-PUBLISHED-TTL:PT2H")
+    //Remove default TZ from calendar - not required as each event contains its own TZ
+    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "")
 
     //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
     //body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
@@ -162,7 +164,7 @@ export default {
           //Change events longer than 23 hours to be All Day events based on end date
           else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
             const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\n`)
+            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\r\n`)
                 .replace(/DTEND[^\n]+(\d{8}T\d{6})/, '');
             modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
           }
@@ -172,16 +174,19 @@ export default {
           }
         }
       });
-          //Removes default time zone information from header (leaves only first 6 lines)
-    const newHeader = header.split('\n').slice(0, 6).join('\n');
       //Combine the header and modified event data
-      const modifiedFileContent = newHeader + modifiedEvents.join("");
+      const modifiedFileContent = header + modifiedEvents.join("");
       const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
       body = finalFileContent;
     }
     if (updateParams != "true") { //hideupdate
       //body = body.replaceAll("DESCRIPTION:","DESCRIPTION:Last Roster Sync: " + syncTime + " \\n\\n\r\n "); //Time logged within events for awareness
       body = body.replaceAll("DESCRIPTION:", `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `);
+      //Remove blank lines - note CRLF "End of Line" break requirements.
+      body = body.replace(/\r\n\r\n\r\n\r\n\r\n/g, "\r\n");
+      body = body.replace(/\r\n\r\n\r\n\r\n/g, "\r\n");
+      body = body.replace(/\r\n\r\n\r\n/g, "\r\n");
+      body = body.replace(/\r\n\r\n/g, "\r\n");
 
     }
 
