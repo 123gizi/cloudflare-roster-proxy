@@ -9,8 +9,13 @@ export default {
       },
     };
 
-//AM 3.7.4
-    //TEMP Solutions after update
+    const { searchParams } = new URL(request.url);
+    let targetUrl = searchParams.get('url');
+    const overlapParams = searchParams.get('overlap'); //By default, your duty shift will be combined with the tasking rostered
+    const updateParams = searchParams.get('hideupdate'); //Can be used to hide update time from DESCRIPTION if required
+    const refreshCache = searchParams.get('cache') === 'false';
+
+    //Cookies required as temporary solution after AM 3.7.4 update
     const cookieData = [REDACTED];
     const init_approved = {
       method: 'GET',
@@ -18,8 +23,7 @@ export default {
         'content-type': 'text/calendar; charset=UTF-8',
         'Cookie': cookieData,
       },
-      
-      //cf: { cacheTtl: 5 }
+      cf: { cacheTtl: refreshCache ? 0 : 1800 }, //Cache for 25 minutes (1800 seconds) unless refreshCache is true. This is to reduce the number of requests sent to the Origin Server unless it explicitly instructs 'Cache-Control: no-cache or max-age=0'
     };
 
     const init_denied = {
@@ -28,13 +32,12 @@ export default {
         "status": "403",
       },
     };
-    const { searchParams } = new URL(request.url);
-    let targetUrl = searchParams.get('url');
-    let overlapParams = searchParams.get('overlap'); //Do you want your duty shift to combine with the tasking rostered?
-    let updateParams = searchParams.get('hideupdate'); //Can be used to hide update time from DESCRIPTION if required
+
     const newDate = new Date(Date.now());
     const syncTime = newDate.toUTCString();
-    console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl}`); //Used for troubleshooting and monitoring worker requests
+    const formattedNow = newDate.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, ''); //YYYYMMDDTHHMMSSZ
+    //console.log(`${newDate.toDateString()} ${newDate.toTimeString()} - ${targetUrl}`); //Troubleshooting log, this can be removed at a later stage
+    console.log(`${syncTime} - URL: ${targetUrl}`); //Troubleshooting log, this can be removed at a later stage
 
     //Only allowed URLs may be used with this worker. Allowance made for domain change in 2023 for the roster service.
     if (targetUrl != null ){
@@ -50,7 +53,6 @@ export default {
       if (approvedUrl.startsWith(allowed, 8)) {
         approvedUrl = targetUrl;
         let response = await fetch(approvedUrl, init_approved);
-        //let response = await fetch(approvedUrl);
         let { readable, writable } = new TransformStream();
         streamBody(response.body, writable);
 
@@ -78,22 +80,22 @@ export default {
     }
 
     //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
-    body = body.replace("VERSION:2.0", "VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-PUBLISHED-TTL:PT2H")
-    //Remove default TZ from calendar - not required as each event contains its own TZ
-    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "")
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified for regular use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`)
 
-    //Regex used to replace all TZIDs with Etc/UTC to correct for time abnormalities within AM
-    //body = body.replace(/(?<=;TZID=).*?(?=:)/gms, "Etc/UTC")
-    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:")
-    //body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
+    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "") //Remove default TZ from calendar  - not required as each event contains its own TZ
 
-    //Filters to be used to remove duplicate information inherent in AM
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STANDBY[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events
+
+    //Filters to be used to remove duplicate information within AM
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*SAPL[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*STBY[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STB - Standby[\s\S]+?END:VEVENT/g, "") //AMSA
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
+
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - ABF[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LDO - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:ALV - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:SICK - ABF[\s\S]+?END:VEVENT/g, "")
@@ -108,22 +110,22 @@ export default {
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - ABF[\s\S]+?END:VEVENT/g, "")
 
-    //Truncate common event names to simplify output
+    //Simplify event names
     body = body.replace(/SUMMARY:RDO - Rostered Day Off/g, "SUMMARY:RDO")
     body = body.replace(/SUMMARY:DDO - Destination Day Off/g, "SUMMARY:DDO")
     body = body.replace(/SUMMARY:LDO - Locked-in Day Off/g, "SUMMARY:LDO")
     body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
-    body = body.replace(/SUMMARY:ABFS - STANDBY/g, "SUMMARY:Standby")
+    body = body.replace(/SUMMARY:STANDBY/g, "SUMMARY:Standby")
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
     body = body.replace(/SUMMARY:LR - Leave Requested/g, "SUMMARY:Leave Requested")
     body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
     body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
 
     //Remove additional spaces left over after AM removes unpublished data for user
+    //body = body.replace(/(\\n){3,}/g, "\\n\\n"); //Simplified Option
     //body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
     //body = body.replace(/\\n\\n\\n\\n/gms, "\\n\\n")
     //body = body.replace(/\\n\\n\\n/gms, "\\n\\n")
-    //body = body.replace(/&nbsp\\;/gms, " ")
 
 //To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
     if (overlapParams != "true") { //overlap
@@ -180,14 +182,14 @@ export default {
       body = finalFileContent;
     }
     if (updateParams != "true") { //hideupdate
-      //body = body.replaceAll("DESCRIPTION:","DESCRIPTION:Last Roster Sync: " + syncTime + " \\n\\n\r\n "); //Time logged within events for awareness
-      body = body.replaceAll("DESCRIPTION:", `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `);
-      //Remove blank lines - note CRLF "End of Line" break requirements.
-      body = body.replace(/\r\n\r\n\r\n\r\n\r\n/g, "\r\n");
-      body = body.replace(/\r\n\r\n\r\n\r\n/g, "\r\n");
-      body = body.replace(/\r\n\r\n\r\n/g, "\r\n");
-      body = body.replace(/\r\n\r\n/g, "\r\n");
+      body = body.replaceAll("DESCRIPTION:", `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
 
+      //Remove blank lines - Note: CRLF "End of Line" break requirements
+      body = body.replace(/(\r\n){2,}/g, "\r\n"); //Simplified Option
+      //body = body.replace(/\r\n\r\n\r\n\r\n\r\n/g, "\r\n");
+      //body = body.replace(/\r\n\r\n\r\n\r\n/g, "\r\n");
+      //body = body.replace(/\r\n\r\n\r\n/g, "\r\n");
+      //body = body.replace(/\r\n\r\n/g, "\r\n");
     }
 
     await writer.write(encoder.encode(body))
