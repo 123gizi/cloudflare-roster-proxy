@@ -82,9 +82,6 @@ export default {
     //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified for regular use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`)
 
-    //"END:VCALENDAR" as it will be added back in once the events are sorted
-    //body = body.replace(/END:VCALENDAR/g, "")
-
     body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "") //Remove default TZ from calendar - not required as each event contains its own TZ
     //body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "BEGIN:VTIMEZONE\r\nTZID:UTC\r\nBEGIN:STANDARD\r\nDTSTART:19700101T000000Z\r\nTZOFFSETFROM:+0000\r\nTZOFFSETTO:+0000\r\nEND:STANDARD\r\nEND:VTIMEZONE") //Replace default TZ generated with only UTC - not required as each event contains its own TZ
 
@@ -95,16 +92,15 @@ export default {
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*SAPL[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STB - Standby[\s\S]+?END:VEVENT/g, "") //AMSA
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*AMSA[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STB - Standby[\s\S]+?END:VEVENT/g, "")
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g, "")
 
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - AMSA[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LDO - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:ALV - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:SICK - ABF[\s\S]+?END:VEVENT/g, "")
-    //body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:CAO 48 LIM[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION: CAOL - CAO 48[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:MLV - ABF[\s\S]+?END:VEVENT/g, "")
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:BLV - ABF[\s\S]+?END:VEVENT/g, "")
@@ -125,14 +121,10 @@ export default {
     body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
     body = body.replace(/SUMMARY:LR - Leave Requested/g, "SUMMARY:Leave Requested")
     body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
-    //body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
     body = body.replace(/SUMMARY:CAO 48 LIM/g, "SUMMARY:CAO")
 
-    //Remove additional spaces left over after AM removes unpublished data for user
-    //body = body.replace(/(\\n){3,}/g, "\\n\\n");
-
-    //To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
-    if (overlapParams !== "true") {
+    //Used to combine some events and mark All Day events correctly. This is set as DEFAULT and presents events differently to the standard experience of AM.
+    if (overlapParams !== "true") { //overlap API Option
         let events = [];
         // Parse events from the calendar body
         const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
@@ -153,13 +145,14 @@ export default {
             const currentEvent = events[i];
             const previousEvent = i > 0 ? events[i - 1] : null;
             const nextEvent = i < events.length - 1 ? events[i + 1] : null;
-            
-            if (currentEvent.includes("Route")) {
-                // Modify Route event based on adjacent events
+
+            if (currentEvent.includes("Route") && currentEvent.includes("VH-Z")) {
                 if (nextEvent && nextEvent.includes("ABF - ABF")) {
                     events[i] = modifyDT(currentEvent, nextEvent);
                     events.splice(i + 1, 1); // Remove the next event
-                } else if (previousEvent && (previousEvent.includes("TVL") || previousEvent.includes("TRVD"))) {
+                }
+            } else if (currentEvent.includes("Route") && currentEvent.includes("TRAVEL")) {
+                if (previousEvent && (previousEvent.includes("TVL") || previousEvent.includes("TRVD"))) {
                     events[i] = modifyDT(currentEvent, previousEvent);
                     events.splice(i - 1, 1); // Remove the previous event
                     i--; // Adjust index since we removed an event
@@ -231,7 +224,7 @@ export default {
         throw new Error('DTEND not found in event');
     }
 
-    if (updateParams != "true") { //hideupdate
+    if (updateParams != "true") { //hideupdate API Option
       body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
     }
     //Remove blank lines - Note: CRLF "End of Line" break requirements
