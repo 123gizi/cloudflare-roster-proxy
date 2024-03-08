@@ -85,55 +85,60 @@ export default {
     body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "") //Remove default TZ from calendar - not required as each event contains its own TZ
     //body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "BEGIN:VTIMEZONE\r\nTZID:UTC\r\nBEGIN:STANDARD\r\nDTSTART:19700101T000000Z\r\nTZOFFSETFROM:+0000\r\nTZOFFSETTO:+0000\r\nEND:STANDARD\r\nEND:VTIMEZONE") //Replace default TZ generated with only UTC - not required as each event contains its own TZ
 
-    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events
+    // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
+    const summaryFilters = [
+        "ABFS - STANDBY",
+        "ADM - Administration",
+        "CARERS LEAVE",
+        ".*SAPL",
+        ".*AMSA",
+        "STB - Standby",
+    ];
 
-    //Filters to be used to remove duplicate information within AM
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*SAPL[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STB - Standby[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g, "")
+    const descriptionFilters = [
+        "RDO",
+        "LDO",
+        "ALV",
+        "SICK",
+        "MLV",
+        "BLV",
+        "DFRLV",
+        "LSL",
+        "LWOP",
+        "WCOMP",
+        "LVR",
+        "DDO",
+        "DIL",
+        " CAOL - CAO 48",
+    ];
 
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LDO - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:ALV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:ALV - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:SICK - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:SICK - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION: CAOL - CAO 48[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:MLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:MLV - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:BLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:BLV - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DFRLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DFRLV - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LSL - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LSL - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LWOP - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LWOP - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:WCOMP - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:WCOMP - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LVR - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LVR - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - AMSA[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - AMSA[\s\S]+?END:VEVENT/g, "")
+    // Simplify event names using "Original Title: New Title" (processed after the filter)
+    const eventNames = {
+        "RDO - Rostered Day Off": "RDO",
+        "DDO - Destination Day Off": "DDO",
+        "LDO - Locked-in Day Off": "LDO",
+        "ALV - Annual Leave": "Annual Leave",
+        "STANDBY": "Standby",
+        "SICK - Sick Leave": "Sick Leave",
+        "LR - Leave Requested": "Leave Requested",
+        "DIL - Day Off In Lieu": "DIL",
+        "CAO 48 LIM": "CAO",
+    };
 
-    //Simplify event names
-    body = body.replace(/SUMMARY:RDO - Rostered Day Off/g, "SUMMARY:RDO")
-    body = body.replace(/SUMMARY:DDO - Destination Day Off/g, "SUMMARY:DDO")
-    body = body.replace(/SUMMARY:LDO - Locked-in Day Off/g, "SUMMARY:LDO")
-    body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
-    body = body.replace(/SUMMARY:STANDBY/g, "SUMMARY:Standby")
-    body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
-    body = body.replace(/SUMMARY:LR - Leave Requested/g, "SUMMARY:Leave Requested")
-    body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
-    body = body.replace(/SUMMARY:CAO 48 LIM/g, "SUMMARY:CAO")
+    summaryFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:${pattern.source}[\s\S]+?END:VEVENT`, 'g'), "");
+    });
+
+    descriptionFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:${pattern.source}[\s\S]+?END:VEVENT`, 'g'), "");
+    });
+
+    //Must be processed after the filters
+    for (const [oldName, newName] of Object.entries(eventNames)) {
+        body = body.replace(new RegExp(`SUMMARY:${oldName}`, 'g'), `SUMMARY:${newName}`);
+    }
+
+    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
 
     //Used to combine some events and mark All Day events correctly. This is set as DEFAULT and presents events differently to the standard experience of AM.
     if (overlapParams !== "true") { //overlap API Option
