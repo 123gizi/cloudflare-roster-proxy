@@ -1,5 +1,6 @@
 import html_home from './html_home.html';
 import html_denied from './html_denied.html';
+import cookieData from './cookieData.js';
 
 export default {
   async fetch(request) {
@@ -15,8 +16,7 @@ export default {
     const updateParams = searchParams.get('hideupdate'); //Can be used to hide update time from DESCRIPTION if required
     const refreshCache = searchParams.get('cache') === 'false';
 
-    //Cookies required as temporary solution after AM 3.7.4 update
-    const cookieData = [REDACTED];
+    //Cookies required as of AM 3.7.4 update
     const init_approved = {
       method: 'GET',
       headers: {
@@ -126,11 +126,11 @@ export default {
     };
 
     summaryFilters.forEach(pattern => {
-        body = body.replace(new RegExp(`BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:${pattern.source}[\s\S]+?END:VEVENT`, 'g'), "");
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?SUMMARY:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
     });
 
     descriptionFilters.forEach(pattern => {
-        body = body.replace(new RegExp(`BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:${pattern.source}[\s\S]+?END:VEVENT`, 'g'), "");
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?DESCRIPTION:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
     });
 
     //Must be processed after the filters
