@@ -1,5 +1,6 @@
 import html_home from './html_home.html';
 import html_denied from './html_denied.html';
+import cookieData from './cookieData.js';
 
 export default {
   async fetch(request) {
@@ -15,8 +16,7 @@ export default {
     const updateParams = searchParams.get('hideupdate'); //Can be used to hide update time from DESCRIPTION if required
     const refreshCache = searchParams.get('cache') === 'false';
 
-    //Cookies required as temporary solution after AM 3.7.4 update
-    const cookieData = [REDACTED];
+    //Cookies required as of AM 3.7.4 update
     const init_approved = {
       method: 'GET',
       headers: {
@@ -66,135 +66,194 @@ export default {
     }
 
   async function streamBody(readable, writable) {
-    let reader = readable.getReader();
-    let writer = writable.getWriter();
-    const decoder = new TextDecoder('utf-8');
-    const encoder = new TextEncoder('utf-8');
+      const reader = readable.getReader();
+      const writer = writable.getWriter();
+      const decoder = new TextDecoder('utf-8');
+      const encoder = new TextEncoder('utf-8');
 
-    let body = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      body += decoder.decode(value)
-    }
+      try {
+          let body = '';
+          while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              body += decoder.decode(value);
+          }
 
     //Adding a Name to the calendar and a suggested publish limit of no more than once per hour
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified for regular use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`)
 
-    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "") //Remove default TZ from calendar  - not required as each event contains its own TZ
+    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "") //Remove default TZ from calendar - not required as each event contains its own TZ
+    //body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, "BEGIN:VTIMEZONE\r\nTZID:UTC\r\nBEGIN:STANDARD\r\nDTSTART:19700101T000000Z\r\nTZOFFSETFROM:+0000\r\nTZOFFSETTO:+0000\r\nEND:STANDARD\r\nEND:VTIMEZONE") //Replace default TZ generated with only UTC - not required as each event contains its own TZ
 
-    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events
+    // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
+    const summaryFilters = [
+        "ABFS - STANDBY",
+        "ADM - Administration",
+        "CARERS LEAVE",
+        ".*SAPL",
+        ".*AMSA",
+        "STB - Standby",
+    ];
 
-    //Filters to be used to remove duplicate information within AM
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:CARERS LEAVE[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:.*SAPL[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:STB - Standby[\s\S]+?END:VEVENT/g, "") //AMSA
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
+    const descriptionFilters = [
+        "RDO",
+        "LDO",
+        "ALV",
+        "SICK",
+        "MLV",
+        "BLV",
+        "DFRLV",
+        "LSL",
+        "LWOP",
+        "WCOMP",
+        "LVR",
+        "DDO",
+        "DIL",
+        " CAOL - CAO 48",
+    ];
 
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:RDO - AMSA[\s\S]+?END:VEVENT/g, "") //AMSA
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:ALV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:SICK - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:CAO 48 LIM[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:MLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:BLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DFRLV - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LSL - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LWOP - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:WCOMP - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:LVR - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DDO - ABF[\s\S]+?END:VEVENT/g, "")
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION:DIL - ABF[\s\S]+?END:VEVENT/g, "")
+    // Simplify event names using "Original Title: New Title" (processed after the filter)
+    const eventNames = {
+        "RDO - Rostered Day Off": "RDO",
+        "DDO - Destination Day Off": "DDO",
+        "LDO - Locked-in Day Off": "LDO",
+        "ALV - Annual Leave": "Annual Leave",
+        "STANDBY": "Standby",
+        "SICK - Sick Leave": "Sick Leave",
+        "LR - Leave Requested": "Leave Requested",
+        "DIL - Day Off In Lieu": "DIL",
+        "CAO 48 LIM": "CAO",
+    };
 
-    //Simplify event names
-    body = body.replace(/SUMMARY:RDO - Rostered Day Off/g, "SUMMARY:RDO")
-    body = body.replace(/SUMMARY:DDO - Destination Day Off/g, "SUMMARY:DDO")
-    body = body.replace(/SUMMARY:LDO - Locked-in Day Off/g, "SUMMARY:LDO")
-    body = body.replace(/SUMMARY:ALV - Annual Leave/g, "SUMMARY:Annual Leave")
-    body = body.replace(/SUMMARY:STANDBY/g, "SUMMARY:Standby")
-    body = body.replace(/SUMMARY:SICK - Sick Leave/g, "SUMMARY:Sick Leave")
-    body = body.replace(/SUMMARY:LR - Leave Requested/g, "SUMMARY:Leave Requested")
-    body = body.replace(/SUMMARY:DIL - Day Off In Lieu/g, "SUMMARY:DIL")
-    body = body.replace(/SUMMARY:CAOL - CAO 48 Limitation/g, "SUMMARY:CAO")
+    summaryFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?SUMMARY:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
+    });
 
-    //Remove additional spaces left over after AM removes unpublished data for user
-    //body = body.replace(/(\\n){3,}/g, "\\n\\n"); //Simplified Option
-    //body = body.replace(/\\n\\n\\n\\n\\n/gms, "\\n\\n")
-    //body = body.replace(/\\n\\n\\n\\n/gms, "\\n\\n")
-    //body = body.replace(/\\n\\n\\n/gms, "\\n\\n")
+    descriptionFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?DESCRIPTION:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
+    });
 
-//To be used to combine some events and mark All Day events correctly. The "IF" can be adjusted to set as default once working without issue and no objections from users as this presents infromation differently to the standard web experience of AM.
-    if (overlapParams != "true") { //overlap
-      const header = body.split("BEGIN:VEVENT")[0]; //Extract the header (everything before the first "BEGIN:VEVENT")
-      const modifiedEvents = []; //Array to store modified events. Used to preserve event order purely for easy before/after text comparison
-      const events = body.split("BEGIN:VEVENT"); //Split the data by events
-      events.shift(); //Removes the first element which is the header
-      events.forEach((eventData) => {
-        //Extract start/end times for later processing
-        const dtstartMatch = eventData.match(/DTSTART[^\n]+(\d{8}T\d{6})/);
-        const dtendMatch = eventData.match(/DTEND[^\n]+(\d{8}T\d{6})/);
-        if (dtstartMatch && dtendMatch) {
-          const dtstart = new Date(dtstartMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
-          const dtend = new Date(dtendMatch[1].replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6Z'));
-          let modifiedEventData = eventData;
-          //Remove overlapping rostered duty events (tasking / RPT details adjusted to reflect sign-on/off times below) - Skips adding these events to modifiedEvents
-          if (eventData.includes("DESCRIPTION: ABF - ABF") || eventData.includes("DESCRIPTION: TVL - Travel")) {
-            return;
-          }
-          //Modify past and future tasking events to start 2 hours earlier and finish 30 minutes later - reflect general sign-on times
-          if (eventData.includes("DESCRIPTION:ABF - Planned") || eventData.includes("DESCRIPTION:ABF - Partial") || eventData.includes("DESCRIPTION:ABF - Complete")) {
-            dtstart.setHours(dtstart.getHours() - 2);
-            dtend.setMinutes(dtend.getMinutes() + 30);
-            const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
-            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
-          }
-          //Modify RPT events to start 45 minutes earlier and finish 15 minutes later - reflect general sign-on times
-          else if (eventData.includes("DESCRIPTION:TRAVEL")) {
-            dtstart.setMinutes(dtstart.getMinutes() - 45);
-            dtend.setMinutes(dtend.getMinutes() + 15);
-            const modifiedDtstart = dtstart.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            const modifiedDtend = dtend.toISOString().replace(/[:\-]|\.\d{3}Z/g, '');
-            modifiedEventData = modifiedEventData.replace(dtstartMatch[1], modifiedDtstart).replace(dtendMatch[1], modifiedDtend);
-            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
-          }
-          //Change events longer than 23 hours to be All Day events based on end date
-          else if ((dtend - dtstart) > 23 * 60 * 60 * 1000) {
-            const allDayDate = dtstart.toISOString().split('T')[0].replace(/-/g, '');
-            modifiedEventData = modifiedEventData.replace(/DTSTART[^\n]+(\d{8}T\d{6})/, `DTSTART;VALUE=DATE:${allDayDate}\r\n`)
-                .replace(/DTEND[^\n]+(\d{8}T\d{6})/, '');
-            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
-          }
-          //Preserve all other events
-          else {
-            modifiedEvents.push("BEGIN:VEVENT" + modifiedEventData);
-          }
+    //Must be processed after the filters
+    for (const [oldName, newName] of Object.entries(eventNames)) {
+        body = body.replace(new RegExp(`SUMMARY:${oldName}`, 'g'), `SUMMARY:${newName}`);
+    }
+
+    body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
+
+    //Used to combine some events and mark All Day events correctly. This is set as DEFAULT and presents events differently to the standard experience of AM.
+    if (overlapParams !== "true") { //overlap API Option
+        let events = [];
+        // Parse events from the calendar body
+        const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
+        let match;
+        while ((match = eventRegex.exec(body)) !== null) {
+            events.push(match[0]);
         }
-      });
-      //Combine the header and modified event data
-      const modifiedFileContent = header + modifiedEvents.join("");
-      const finalFileContent = modifiedFileContent.trimEnd().endsWith("END:VCALENDAR") ? modifiedFileContent : modifiedFileContent + "\nEND:VCALENDAR";
-      body = finalFileContent;
+
+        // Sort events in chronological order based on DTSTART
+        events.sort((a, b) => {
+            const startA = parseDTSTART(a);
+            const startB = parseDTSTART(b);
+            return startA.localeCompare(startB);
+        });
+
+        // Iterate over events and modify DTSTART and DTEND based on adjacent events
+        for (let i = 0; i < events.length; i++) {
+            const currentEvent = events[i];
+            const previousEvent = i > 0 ? events[i - 1] : null;
+            const nextEvent = i < events.length - 1 ? events[i + 1] : null;
+
+            if (currentEvent.includes("Route") && currentEvent.includes("VH-Z")) {
+                if (nextEvent && nextEvent.includes("ABF - ABF")) {
+                    events[i] = modifyDT(currentEvent, nextEvent);
+                    events.splice(i + 1, 1); // Remove the next event
+                }
+            } else if (currentEvent.includes("Route") && currentEvent.includes("TRAVEL")) {
+                if (previousEvent && (previousEvent.includes("TVL") || previousEvent.includes("TRVD"))) {
+                    events[i] = modifyDT(currentEvent, previousEvent);
+                    events.splice(i - 1, 1); // Remove the previous event
+                    i--; // Adjust index since we removed an event
+                }
+            } else if (/\bA\s*l\s*l\s*D\s*a\s*y\b[\s\S]*?END:VEVENT/.test(currentEvent)) {
+                // Modify All Day event to remove DTEND and adjust DTSTART to correctly display in calendar clients
+                events[i] = modifyAllDayEvent(currentEvent);
+            }
+        }
+
+        // Merge modified event data back into body
+        // Find the index of the first "BEGIN:VEVENT" marker
+        const firstEventIndex = body.indexOf("BEGIN:VEVENT");
+        let mergedEvents = events.join("\r\n");
+        // Concatenate the content before the first event, merged events, and the "END:VCALENDAR" marker
+        body = body.slice(0, firstEventIndex) + mergedEvents + '\r\nEND:VCALENDAR';
+
     }
-    if (updateParams != "true") { //hideupdate
-      body = body.replaceAll("DESCRIPTION:", `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
 
-      //Remove blank lines - Note: CRLF "End of Line" break requirements
-      body = body.replace(/(\r\n){2,}/g, "\r\n"); //Simplified Option
-      //body = body.replace(/\r\n\r\n\r\n\r\n\r\n/g, "\r\n");
-      //body = body.replace(/\r\n\r\n\r\n\r\n/g, "\r\n");
-      //body = body.replace(/\r\n\r\n\r\n/g, "\r\n");
-      //body = body.replace(/\r\n\r\n/g, "\r\n");
+    // Function to modify All Day event to remove DTEND and adjust DTSTART
+    function modifyAllDayEvent(event) {
+        // Remove DTEND line
+        let modifiedEvent = event.replace(/DTEND;[^:\n\r]+:[^\n\r]+/g, '');
+
+        // Adjust DTSTART line to include only the date and set VALUE=DATE
+        modifiedEvent = modifiedEvent.replace(/DTSTART;[^:\n\r]+:([\d]{8})T[\d]{6}/g, 'DTSTART;VALUE=DATE:$1');
+
+        return modifiedEvent;
     }
 
-    await writer.write(encoder.encode(body))
-    await writer.close()
+    // Function to parse DTSTART from event to correctly sort the event array
+    function parseDTSTART(event) {
+        const match = /DTSTART;TZID=[^\n\r]+:(\d{8}T\d{6})/g.exec(event);
+        if (match) {
+            return match[1]; // Extract only the date and time numbers
+        }
+        // If DTSTART is not found, handle appropriately (e.g., throw an error)
+        throw new Error('DTSTART not found in event');
+    }
 
-  }
-  },
-};
+    // Function to modify DTSTART and DTEND with the specified event's start and end time
+    function modifyDT(event, adjacentEvent) {
+        // Extract the DTSTART and DTEND strings from the adjacent event
+        const start = extractDTSTART(adjacentEvent);
+        const end = extractDTEND(adjacentEvent);
+        // Replace DTSTART and DTEND lines in the current event with those from the adjacent event
+        let modifiedEvent = event.replace(/DTSTART;TZID=[^\n\r]+:[^\n\r]+/g, `${start}`);
+        modifiedEvent = modifiedEvent.replace(/DTEND;TZID=[^\n\r]+:[^\n\r]+/g, `${end}`);
+        return modifiedEvent;
+    }
+
+    // Function to extract DTSTART string from event
+    function extractDTSTART(event) {
+        const match = /DTSTART;TZID=[^\n\r]+:[^\n\r]+/g.exec(event);
+        if (match) {
+            return match[0];
+        }
+        // If DTSTART is not found, handle appropriately (e.g., throw an error)
+        throw new Error('DTSTART not found in event');
+    }
+
+    // Function to extract DTEND string from event
+    function extractDTEND(event) {
+        const match = /DTEND;TZID=[^\n\r]+:[^\n\r]+/g.exec(event);
+        if (match) {
+            return match[0];
+        }
+        // If DTEND is not found, handle appropriately (e.g., throw an error)
+        throw new Error('DTEND not found in event');
+    }
+
+    if (updateParams != "true") { //hideupdate API Option
+      body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
+    }
+    //Remove blank lines - Note: CRLF "End of Line" break requirements
+    body = body.replace(/(\r\n){2,}/g, "\r\n");
+
+        await writer.write(encoder.encode(body));
+    } catch (error) {
+        console.error("Error processing stream:", error);
+    } finally {
+        // Close the writer to indicate that we're done
+        await writer.close();
+      }
+    }
+    },
+  };
