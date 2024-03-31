@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Roster Access Project</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roster - Karlendar</title>
   <link rel="icon" href="https://static-assets-5sa.pages.dev/roster/favicon.svg" type="image/svg">
   <style type="text/css">
-
       h1 {
         text-align: center;
       }
@@ -18,12 +18,36 @@
         font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
       }
       #main {
-        width: 750px;
-        margin: 5em auto;
+        width: 750px; /* Default width for desktop */
+        margin: 2em auto; /* Default margin for desktop */
         padding: 2em;
         background-color: #fdfdff;
         border-radius: 0.5em;
         box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
+      }
+      #amLink {
+        width: 100%; /* Set width to 100% by default */
+      }
+      #generateBtn {
+        padding: 5px 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      #generateBtn:hover {
+        background-color: #45a049;
+      }
+      @media (max-width: 700px) {
+        #main {
+          width: auto; /* Adjust to full width for small devices */
+          margin: 0 auto; /* Center horizontally for small devices */
+        }
+        #amLink {
+          width: 50%; /* Set a smaller width for larger screens */
+          max-width: 300px; /* Set a maximum width to prevent excessive stretching */
+        }
       }
       .collapsible {
       background-color: #777;
@@ -38,6 +62,7 @@
       }
       .icons {
       text-align: center;
+      margin-top: 20px;
       }
       .icons img {
       padding: 0px 10px 0px 10px;
@@ -51,48 +76,60 @@
       .active, .collapsible:hover {
       background-color: #555;
       }
+      .generated-link-container {
+        position: relative;
+        margin-top: 20px;
+        display: none;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+      }
+
+      .generated-link-content {
+        word-wrap: anywhere;
+        margin-top: 20px;
+        margin-bottom: 20px;
+      }
+
+      .copy-link-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        padding: 5px 10px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .copy-link-btn:hover {
+        background-color: #45a049;
+      }
       a:link, a:visited { color: #6911Ff; text-decoration: none;}
-      @media (max-width: 700px)
-        { div { margin: 0 auto; width: auto;}}
   </style>
 </head>
 <body>
   <div id="main">
-    <h1>Roster Access Project</h1>
+    <h1>Roster Access 'Karlendar'</h1>
     <h2>Air Maestro via Okta has the final say!</h2>
     <p>The information below will provide information about this project but remember that Air Maestro via Okta along with any calls or messages from Operations has the final say. This should reflect any changes within Air Maestro, but it may take up to 48 hours depending on the calendar service you subscribe to. This is an additional tool to make life easier with checking the roster and making plans. I will not accept any responsibility for anyone missing or running late for shifts.</p>
     <p>You can generate your personal Air Maestro Calendar Link by scrolling to the bottom of the Schedule page of Air Maestro once you sign into Okta.</p>
     <p><img src="https://static-assets-5sa.pages.dev/roster/instructions/AM-Integration.png" width="316" height="161" style="border-width: 1px; border-style: solid;" alt="AM-Integration"></p>
     <p>Generate (if not already active) and Copy the Calendar Link from Air Maestro and paste it in the field below and click the "Generate Modified Link" button. A new subscription URL will be created which you use in any calendar service you choose. It's recommended to complete this on the main device you plan on viewing the calendar on. This can be completed using a company computer, but it may not allow you access to your personal calendars or allow copy and paste of the long link.</p>
-    <p><mark><b>Note:</b> This new URL will be copied to your clipboard to assist with adding it to your calendar service.</mark></p>
     <form id="myform" name="myform">
-      <label for="amLink">Paste Air Maestro External Link Here:</label><br>
-      <input type="text" id="amLink" name="amLink" size="50"><br>
+      <label for="amLink"><mark><b>Paste Air Maestro External Link Here:</b><mark></label><br>
+      <input type="text" id="amLink" name="amLink"><br>
       <br>
       <button type="button" id="generateBtn">Generate Modified Link</button>
     </form>
-    <div id="generatedLink" style="display: none; word-wrap: anywhere; border: 1px solid #ccc;"></div>
-    <div class="icons">
-      <a id="google" href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Google_Calendar.svg" alt="Google Calendar" width="48" height="48"></a> <a id="outlook" href="https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&amp;url=" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/MS_Outlook.svg" alt="Personal M365" width="48" height="48"></a> <a id="leidos" href="https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&amp;url=" something="" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/m365-business.png" alt="Corporate M365" width="120" height="48"></a>
+    <div id="generatedLink" class="generated-link-container">
+      <div id="generatedLinkContent" class="generated-link-content"></div>
+      <button id="copyLinkBtn" class="copy-link-btn">Copy Link</button>
     </div>
-    <script>
-        let text = document.getElementById('generatedLink');
-        generateBtn.onclick = function generateLink(){
-          text.textContent = window.location.toString() + "?url=" + document.getElementById('amLink').value;
-          generatedLink.style.display="block";
-          
-          document.getElementById("outlook").href = "https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&url=" + text.textContent;
-          document.getElementById("leidos").href = "https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&url=" + text.textContent;
-          
-          navigator.clipboard.writeText(text.textContent)
-            .then(() => {
-              alert('Text copied to clipboard');
-            })
-            .catch(err => {
-              alert('Error in copying text: ', err);
-            });
-        };
-    </script>
+    <div class="icons">
+      <a id="google" href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/Google_Calendar.svg" alt="Google Calendar" width="48" height="48"></a> <a id="outlook" href="https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&amp;url=" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/MS_Outlook.svg" alt="Personal M365" width="48" height="48"></a> <a id="corporate" href="https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&amp;url=" something="" target="_blank"><img src="https://static-assets-5sa.pages.dev/roster/icons/m365-business.png" alt="Corporate M365" width="120" height="48"></a>
+    </div>
     <h2>Setup Instructions</h2>
     <p>Air Maestro provider Avinet has an existing how-to guide for various platforms <a href="https://avinet.atlassian.net/wiki/spaces/AMKB/pages/816218113" target="_blank">here</a>, but I've put together some instruction for Google Calendar, Outlook Web and Apple Calendar. This is best completed on&nbsp;</p>
     <p><mark><b>Note:</b> Currently adding external calendars using a <u>company managed Outlook Desktop application is not supported</u> but will show up there shortly after adding it using the web version.</mark></p>
@@ -200,6 +237,55 @@
       </ul>
     </div>
     <p>If you have any questions regarding how this project has been built, you can review the code on <a href="https://github.com/123gizi/cloudflare-roster-proxy" target="_blank">GitHub</a>.</p>
+    <script>
+      let generateBtn = document.getElementById('generateBtn');
+      let generatedLinkContainer = document.getElementById('generatedLink');
+      let generatedLinkContent = document.getElementById('generatedLinkContent');
+      let copyLinkBtn = document.getElementById('copyLinkBtn');
+      let outlookLink = document.getElementById('outlook');
+      let corporateLink = document.getElementById('corporate');
+
+      generateBtn.addEventListener('click', function() {
+        let amLink = document.getElementById('amLink').value;
+        let modifiedLink = window.location.toString() + "?url=" + encodeURIComponent(amLink);
+        generatedLinkContent.textContent = modifiedLink;
+        generatedLinkContainer.style.display = "block";
+        
+        // Update Outlook and Corporate links
+        outlookLink.href = "https://outlook.live.com/calendar/addcalendar?name=Air%20Maestro&url=" + encodeURIComponent(modifiedLink);
+        corporateLink.href = "https://outlook.office.com/calendar/addcalendar?name=Air%20Maestro&url=" + encodeURIComponent(modifiedLink);
+      });
+
+      copyLinkBtn.addEventListener('click', function() {
+        let modifiedLink = generatedLinkContent.textContent;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(modifiedLink)
+            .then(() => {
+              alert('Link copied to clipboard');
+            })
+            .catch(err => {
+              console.error('Failed to copy link: ', err);
+            });
+        } else {
+          let textArea = document.createElement('textarea');
+          textArea.value = modifiedLink;
+          textArea.style.position = 'fixed';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+
+          try {
+            let successful = document.execCommand('copy');
+            let msg = successful ? 'successful' : 'unsuccessful';
+            alert('Link copied to clipboard');
+          } catch (err) {
+            console.error('Failed to copy link: ', err);
+          }
+
+          document.body.removeChild(textArea);
+        }
+      });
+    </script>
     <script>
       var coll = document.getElementsByClassName("collapsible");
       var i;
