@@ -1,6 +1,5 @@
 import html_home from './html_home.html';
 import html_denied from './html_denied.html';
-import cookieData from './cookieData.js';
 
 export default {
   async fetch(request) {
@@ -21,7 +20,6 @@ export default {
       method: 'GET',
       headers: {
         'content-type': 'text/calendar; charset=UTF-8',
-        'Cookie': cookieData,
       },
       cf: { cacheTtl: refreshCache ? 0 : 1800 }, //Cache for 25 minutes (1800 seconds) unless refreshCache is true. This is to reduce the number of requests sent to the Origin Server unless it explicitly instructs 'Cache-Control: no-cache or max-age=0'
     };
@@ -87,8 +85,6 @@ export default {
 
     // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
     const summaryFilters = [
-        "ABFS - STANDBY",
-        "ADM - Administration",
         "CARERS LEAVE",
         ".*SAPL",
         ".*AMSA",
@@ -110,6 +106,8 @@ export default {
         "DDO",
         "DIL",
         " CAOL - CAO 48",
+        "STANDBY - Planned",
+        "ADMIN - Planned",
     ];
 
     // Simplify event names using "Original Title: New Title" (processed after the filter)
@@ -118,7 +116,7 @@ export default {
         "DDO - Destination Day Off": "DDO",
         "LDO - Locked-in Day Off": "LDO",
         "ALV - Annual Leave": "Annual Leave",
-        "STANDBY": "Standby",
+        "ABFS - STANDBY": "Standby",
         "SICK - Sick Leave": "Sick Leave",
         "LR - Leave Requested": "Leave Requested",
         "DIL - Day Off In Lieu": "DIL",
@@ -240,6 +238,21 @@ export default {
         // If DTEND is not found, handle appropriately (e.g., throw an error)
         throw new Error('DTEND not found in event');
     }
+
+    // Function to extract DESCRIPTION field
+    function extractDescription(event) {
+        const match = /DESCRIPTION:(.+)/s.exec(event);
+        return match ? match[1].trim() : "";
+    }
+
+    // Helper function to update DESCRIPTION field
+    function updateDescription(event, newDescription) {
+        return event.replace(/DESCRIPTION:.+/, `DESCRIPTION:${newDescription}`);
+    }
+
+    //Remove events with blank SUMMARY
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, "");
+
 
     if (updateParams != "true") { //hideupdate API Option
       body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
