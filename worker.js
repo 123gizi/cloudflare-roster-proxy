@@ -170,6 +170,7 @@ function commonFilters(body) {
   }
 
   body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
+  body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
   if (updateParams != "true") { //hideupdate API Option
     body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
