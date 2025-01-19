@@ -169,8 +169,8 @@ function commonFilters(body) {
       body = body.replace(new RegExp(`SUMMARY:${oldName}`, 'g'), `SUMMARY:${newName}`);
   }
 
-  body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
-  body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
+  //body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
+  //body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
   if (updateParams != "true") { //hideupdate API Option
     body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
@@ -237,7 +237,6 @@ function modifyMainEvents(body) {
     return body;
 }
 
-// Function to modify All Day event to remove DTEND and adjust DTSTART
 function modifyAllDayEvents(body) {
     console.log("Modifying all-day events");
     const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
@@ -249,8 +248,9 @@ function modifyAllDayEvents(body) {
         events.push(match[0]);
     }
 
-    // Process all-day events
+    // Process all-day events and rare events with DTSTART but no TZID
     events = events.map(event => {
+        // Handle explicitly marked all-day events
         if (/\bA\s*l\s*l\s*D\s*a\s*y\b[\s\S]*?END:VEVENT/.test(event)) {
             // Remove DTEND line and any trailing blank lines
             event = event.replace(/DTEND;[^:\n\r]+:[^\n\r]+\r?\n?/g, '');
@@ -258,6 +258,18 @@ function modifyAllDayEvents(body) {
             // Adjust DTSTART line to include only the date and set VALUE=DATE
             event = event.replace(/DTSTART;[^:\n\r]+:([\d]{8})T[\d]{6}/g, 'DTSTART;VALUE=DATE:$1');
         }
+
+        // Handle rare events with `DTSTART` but no TZID
+        if (/DTSTART:(\d{8}T\d{6})/.test(event)) {
+            console.log("Converting to all-day event:", event);
+
+            // Remove DTEND line
+            event = event.replace(/DTEND;?[^:\n\r]*:[^\n\r]+\r?\n/g, '');
+
+            // Adjust DTSTART to include only the date and set VALUE=DATE
+            event = event.replace(/DTSTART:(\d{8})T\d{6}/g, 'DTSTART;VALUE=DATE:$1');
+        }
+
         return event.trim(); // Ensure no trailing whitespace or blank lines
     });
 
