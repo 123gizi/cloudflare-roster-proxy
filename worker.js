@@ -89,25 +89,30 @@ async function streamBody(readable, writable) {
 }
 // Processing for AM Simplified Link
 function processPathA(body) {
-  console.log("Processing Path A");
+  console.log("[Path A] Starting processing");
   body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
   body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
+  console.log("[Path A] Filters applied");
   body = commonFilters(body); // Process filters prior to modifying events
   body = modifySimpleEvents(body); // Simple event modifications
   body = modifyAllDayEvents(body); // Process all-day events
-  
+  body = finaliseICSContent(body);
+  console.log("[Path A] Completed processing");
   return body;
 }
 
 // Processing for AM Full Link (Original)
 function processPathB(body) {
-  console.log("Processing Path B");
+  console.log("[Path B] Starting processing");
   body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified AM Full External Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
   body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "");
   body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "");
+  console.log("[Path B] Filters applied");
   body = commonFilters(body); // Process filters prior to modifying events
   body = modifyMainEvents(body); // Main event modifications
   body = modifyAllDayEvents(body); // Process all-day events
+  body = finaliseICSContent(body);
+  console.log("[Path B] Completed processing");
   return body;
 }
 
@@ -177,6 +182,7 @@ function commonFilters(body) {
   }
   //Remove blank lines - Note: CRLF "End of Line" break requirements
   body = body.replace(/(\r\n){2,}/g, "\r\n");
+  console.log("Common filters applied");
 
   return body;
 }
@@ -184,7 +190,7 @@ function commonFilters(body) {
 // Function for Path B
 function modifyMainEvents(body) {
     // Parse events from the calendar body
-    console.log("Modifying events");
+    console.log("[Path B] Modifying main events");
     const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
     let events = [];
     let match;
@@ -231,14 +237,13 @@ function modifyMainEvents(body) {
     const firstEventIndex = body.indexOf("BEGIN:VEVENT");
     const mergedEvents = events.join("\r\n");
 
-    // Concatenate the content before the first event, merged events, and the "END:VCALENDAR" marker
-    body = body.slice(0, firstEventIndex) + mergedEvents + '\r\nEND:VCALENDAR';
+    // Concatenate the content before the first event and merged events
+    body = body.slice(0, firstEventIndex) + mergedEvents;
 
     return body;
 }
 
 function modifyAllDayEvents(body) {
-    console.log("Modifying all-day events");
     const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
     let events = [];
     let match;
@@ -261,7 +266,6 @@ function modifyAllDayEvents(body) {
 
         // Handle rare events with `DTSTART` but no TZID
         if (/DTSTART:(\d{8}T\d{6})/.test(event)) {
-            console.log("Converting to all-day event:", event);
 
             // Remove DTEND line
             event = event.replace(/DTEND;?[^:\n\r]*:[^\n\r]+\r?\n/g, '');
@@ -277,8 +281,11 @@ function modifyAllDayEvents(body) {
     const firstEventIndex = body.indexOf("BEGIN:VEVENT");
     const mergedEvents = events.join("\r\n");
 
-    // Concatenate the content before the first event, merged events, and the "END:VCALENDAR" marker
-    return body.slice(0, firstEventIndex) + mergedEvents + '\r\nEND:VCALENDAR';
+    // Concatenate the content before the first event and merged events
+    body = body.slice(0, firstEventIndex) + mergedEvents;
+    console.log("All-Day events modified");
+
+    return body;
 }
 
 // Function to parse DTSTART from event to correctly sort the event array
@@ -325,7 +332,7 @@ function extractDTEND(event) {
 // Function for Path A
 function modifySimpleEvents(body) {
     // Parse events from the calendar body
-    console.log("Modifying events");
+    console.log("[Path A] Modifying simple events");
     const eventRegex = /BEGIN:VEVENT([\s\S]+?)END:VEVENT/g;
     let events = [];
     let match;
@@ -371,10 +378,25 @@ function modifySimpleEvents(body) {
     const firstEventIndex = body.indexOf("BEGIN:VEVENT");
     const mergedEvents = events.join("\r\n");
 
-    // Concatenate the content before the first event, merged events, and the "END:VCALENDAR" marker
-    body = body.slice(0, firstEventIndex) + mergedEvents + '\r\nEND:VCALENDAR';
+    // Concatenate the content before the first event and merged events
+    body = body.slice(0, firstEventIndex) + mergedEvents;
 
     return body;
+}
+
+// Function to ensure the final ICS is well formed containing the required VCALENDAR ending.
+function finaliseICSContent(body) {
+    console.log("Ensuring ICS ends with END:VCALENDAR");
+
+    // Reconstruct the final ICS body
+    let finalBody = body;
+
+    // Ensure the file ends with END:VCALENDAR
+    if (!finalBody.trim().endsWith("END:VCALENDAR")) {
+        finalBody += '\r\nEND:VCALENDAR';
+    }
+
+    return finalBody;
 }
 
   },
