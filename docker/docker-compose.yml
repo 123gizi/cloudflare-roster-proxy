@@ -1,0 +1,12 @@
+services:
+  node-app:
+    build: .
+    container_name: roster-proxy-app
+    volumes:
+      - .:/app
+    ports:
+      - "8787:8787"  # Expose the port used by wrangler
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    command: npx wrangler dev
