@@ -1,0 +1,12 @@
+services:
+  roster-proxy-app:
+    build: .
+    container_name: roster-proxy-app
+    ports:
+      - "5275:5275"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
