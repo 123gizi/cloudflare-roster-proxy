@@ -5,15 +5,20 @@ const url = require('url');
 const html_home = fs.readFileSync('./html_home.html', 'utf8');
 const html_denied = fs.readFileSync('./html_denied.html', 'utf8');
 
-const newDate = new Date(Date.now());
-const syncTime = newDate.toUTCString(); // Placed inside event DESCRIPTION for user awareness
-const formattedNow = newDate.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, ''); //YYYYMMDDTHHMMSSZ - Placed inside ICS header as required by some calendar services
+function getTimeStamps() {
+    const now = new Date();
+    return {
+        syncTime: now.toUTCString(), // Placed inside event DESCRIPTION for user awareness
+        formattedNow: now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, ''), //YYYYMMDDTHHMMSSZ - Placed inside ICS header as required by some calendar services
+    };
+}
 
 const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
     let targetUrl = parsedUrl.query.url;
     const updateParams = parsedUrl.query.hideupdate; //Ensure you pass updateParams to commonFilters
 
+    const { syncTime, formattedNow } = getTimeStamps();
     console.log(`${syncTime} - URL: ${targetUrl}`); //Troubleshooting log - can be removed at a later stage
 
     if (targetUrl) {
@@ -32,9 +37,9 @@ const server = http.createServer(async (req, res) => {
                 let body = await response.text();
 
                 if (/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g.test(body)) {
-                    body = processPathA(body, updateParams);
+                    body = processPathA(body, updateParams, formattedNow);
                 } else {
-                    body = processPathB(body, updateParams);
+                    body = processPathB(body, updateParams, formattedNow);
                 }
 
                 res.writeHead(200, {'Content-Type': 'text/calendar; charset=UTF-8'});
@@ -55,12 +60,12 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Processing for AM Simplified Link
-function processPathA(body, updateParams) {
+function processPathA(body, updateParams, formattedNow, syncTime) {
     console.log("[Path A] Starting process");
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path A] Filters applied");
-    body = commonFilters(body, updateParams); // Process filters prior to modifying events
+    body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifySimpleEvents(body); // Simple event modifications
     body = modifyAllDayEvents(body); // Process all-day events
     body = finaliseICSContent(body);
@@ -69,13 +74,13 @@ function processPathA(body, updateParams) {
 }
 
 // Processing for AM Full Link (Original)
-function processPathB(body, updateParams) {
+function processPathB(body, updateParams, formattedNow, syncTime) {
     console.log("[Path B] Starting process");
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified AM Full External Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "");
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "");
     console.log("[Path B] Filters applied");
-    body = commonFilters(body, updateParams); // Process filters prior to modifying events
+    body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifyMainEvents(body); // Main event modifications
     body = modifyAllDayEvents(body); // Process all-day events
     body = finaliseICSContent(body);
@@ -84,7 +89,7 @@ function processPathB(body, updateParams) {
 }
 
 // Common Processing for either AM Link
-function commonFilters(body, updateParams) {
+function commonFilters(body, updateParams, syncTime) {
     body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, ""); //Remove default TZ from calendar - not required as each event contains its own TZ
 
     // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
