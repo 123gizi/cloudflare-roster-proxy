@@ -37,9 +37,9 @@ const server = http.createServer(async (req, res) => {
                 let body = await response.text();
 
                 if (/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g.test(body)) {
-                    body = processPathA(body, updateParams, formattedNow);
+                    body = processPathA(body, updateParams, formattedNow, syncTime);
                 } else {
-                    body = processPathB(body, updateParams, formattedNow);
+                    body = processPathB(body, updateParams, formattedNow, syncTime);
                 }
 
                 res.writeHead(200, {'Content-Type': 'text/calendar; charset=UTF-8'});
