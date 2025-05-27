@@ -36,7 +36,12 @@ const server = http.createServer(async (req, res) => {
                 const response = await fetch(targetUrl);
                 let body = await response.text();
 
-                if (/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g.test(body)) {
+                const pathARegex = /BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g;
+                const pathCRegex = /BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g;
+
+                if (pathARegex.test(body) && pathCRegex.test(body)) {
+                    body = processPathC(body, updateParams, formattedNow, syncTime);
+                } else if (pathARegex.test(body)) {
                     body = processPathA(body, updateParams, formattedNow, syncTime);
                 } else {
                     body = processPathB(body, updateParams, formattedNow, syncTime);
@@ -62,7 +67,7 @@ const server = http.createServer(async (req, res) => {
 // Processing for AM Simplified Link
 function processPathA(body, updateParams, formattedNow, syncTime) {
     console.log("[Path A] Starting process");
-    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path A] Filters applied");
     body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
@@ -76,7 +81,7 @@ function processPathA(body, updateParams, formattedNow, syncTime) {
 // Processing for AM Full Link (Original)
 function processPathB(body, updateParams, formattedNow, syncTime) {
     console.log("[Path B] Starting process");
-    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified AM Full External Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 2 paths should both be used within the same calendar application
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified AM Full External Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "");
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "");
     console.log("[Path B] Filters applied");
@@ -85,6 +90,19 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
     body = modifyAllDayEvents(body); // Process all-day events
     body = finaliseICSContent(body);
     console.log("[Path B] Completed processing");
+    return body;
+}
+
+// Processing for SAR Simplified Link
+function processPathC(body, updateParams, formattedNow, syncTime) {
+    console.log("[Path C] Starting process");
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple SAR Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
+    console.log("[Path C] Filters applied");
+    body = simpleSARFilters(body, updateParams, syncTime); // Process filters prior to modifying events
+    body = modifyAllDayEvents(body); // Process all-day events
+    body = finaliseICSContent(body);
+    console.log("[Path C] Completed processing");
     return body;
 }
 
@@ -353,6 +371,69 @@ function modifySimpleEvents(body) {
 
     // Concatenate the content before the first event and merged events
     body = body.slice(0, firstEventIndex) + mergedEvents;
+
+    return body;
+}
+
+// Processing filters for Simple SAR calendar
+function simpleSARFilters(body, updateParams, syncTime) {
+    body = body.replace(/BEGIN:VTIMEZONE[\s\S]+?END:VTIMEZONE/g, ""); //Remove default TZ from calendar - not required as each event contains its own TZ
+
+    // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
+    const summaryFilters = [
+        "CARERS LEAVE",
+    ];
+
+    const descriptionFilters = [
+        "RDO",
+        "LDO",
+        "ALV",
+        "SICK",
+        "MLV",
+        "BLV",
+        "DFRLV",
+        "LSL",
+        "LWOP",
+        "WCOMP",
+        "LVR",
+        "DDO",
+        "DIL",
+        " CAOL - CAO 48",
+    ];
+
+    // Simplify event names using "Original Title: New Title" (processed after the filter)
+    const eventNames = {
+        "RDO - Rostered Day Off": "RDO",
+        "DDO - Destination Day Off": "DDO",
+        "LDO - Locked-in Day Off": "LDO",
+        "ALV - Annual Leave": "Annual Leave",
+        "ABFS - STANDBY": "Standby",
+        "STANDBY": "Standby",
+        "SICK - Sick Leave": "Sick Leave",
+        "LR - Leave Requested": "Leave Requested",
+        "DIL - Day Off In Lieu": "DIL",
+        "CAOL - CAO 48 Limitation": "CAO",
+    };
+
+    summaryFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?SUMMARY:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
+    });
+
+    descriptionFilters.forEach(pattern => {
+        body = body.replace(new RegExp(`BEGIN:VEVENT([\\s\\S](?!BEGIN:VEVENT))+?DESCRIPTION:${pattern}[\\s\\S]+?END:VEVENT`, 'g'), "");
+    });
+
+    //Must be processed after the filters
+    for (const [oldName, newName] of Object.entries(eventNames)) {
+        body = body.replace(new RegExp(`SUMMARY:${oldName}`, 'g'), `SUMMARY:${newName}`);
+    }
+
+    if (updateParams != "true") { //hideupdate API Option
+      body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
+    }
+    //Remove blank lines - Note: CRLF "End of Line" break requirements
+    body = body.replace(/(\r\n){2,}/g, "\r\n");
+    console.log("Common filters applied");
 
     return body;
 }
