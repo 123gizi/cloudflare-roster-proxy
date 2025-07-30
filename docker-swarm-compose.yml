@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  roster-proxy-app:
+    build: .
+    ports:
+      - "5275:5275"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    networks:
+      - public_cloudflare_network
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  public_cloudflare_network:
+    external: true
