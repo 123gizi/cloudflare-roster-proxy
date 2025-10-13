@@ -182,6 +182,8 @@ function commonFilters(body) {
   }
   //Remove blank lines - Note: CRLF "End of Line" break requirements
   body = body.replace(/(\r\n){2,}/g, "\r\n");
+  // Correct line break error for "Scheduled On-Task Time" custom field
+  body = body.replace(/Custom Fields:Scheduled\\nOn-Task/g, "Custom Fields:\\nScheduled On-Task");
   console.log("Common filters applied");
 
   return body;
