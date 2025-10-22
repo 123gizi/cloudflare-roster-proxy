@@ -88,6 +88,7 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
     body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifyMainEvents(body); // Main event modifications
     body = modifyAllDayEvents(body); // Process all-day events
+    body = body.replace(/\bF\s*i\s*e\s*l\s*d\s*s\s*:/g, "\r\n Fields:\\n"); // Correct "Custom Fields:" to ensure it ends with a new line.
     body = finaliseICSContent(body);
     console.log("[Path B] Completed processing");
     return body;
@@ -456,3 +457,4 @@ function finaliseICSContent(body) {
 server.listen(5275, () => {
     console.log('Server running on port 5275');
 });
+
