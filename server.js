@@ -89,6 +89,7 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
     body = modifyMainEvents(body); // Main event modifications
     body = modifyAllDayEvents(body); // Process all-day events
     body = body.replace(/\bF\s*i\s*e\s*l\s*d\s*s\s*:/g, "\r\n Fields:\\n"); // Correct "Custom Fields:" to ensure it ends with a new line.
+    body = body.replace(/S\s*c\s*h\s*e\s*d\s*u\s*l\s*e\s*d\s*\\n\s*O\s*n\s*-\s*T\s*a\s*s\s*k/g, "Scheduled On-Task\r\n "); // Correct "Scheduled On-Task" to ensure it displays on one line.
     body = finaliseICSContent(body);
     console.log("[Path B] Completed processing");
     return body;
@@ -457,4 +458,3 @@ function finaliseICSContent(body) {
 server.listen(5275, () => {
     console.log('Server running on port 5275');
 });
-
