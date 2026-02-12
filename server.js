@@ -36,7 +36,7 @@ const server = http.createServer(async (req, res) => {
                 const response = await fetch(targetUrl);
                 let body = await response.text();
 
-                const pathARegex = /BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g;
+                const pathARegex = /BEGIN:VEVENT((?!SUMMARY:|BEGIN:VEVENT)[\s\S])*?END:VEVENT|BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g;
                 const pathCRegex = /BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:AMSA - AMSA[\s\S]+?END:VEVENT/g;
 
                 if (pathARegex.test(body) && pathCRegex.test(body)) {
@@ -68,7 +68,7 @@ const server = http.createServer(async (req, res) => {
 function processPathA(body, updateParams, formattedNow, syncTime) {
     console.log("[Path A] Starting process");
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
+    body = body.replace(/BEGIN:VEVENT((?!SUMMARY:|BEGIN:VEVENT)[\s\S])*?END:VEVENT|BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path A] Filters applied");
     body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifySimpleEvents(body); // Simple event modifications
@@ -99,7 +99,7 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
 function processPathC(body, updateParams, formattedNow, syncTime) {
     console.log("[Path C] Starting process");
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple SAR Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
-    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
+    body = body.replace(/BEGIN:VEVENT((?!SUMMARY:|BEGIN:VEVENT)[\s\S])*?END:VEVENT|BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path C] Filters applied");
     body = simpleSARFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifyAllDayEvents(body); // Process all-day events
