@@ -84,6 +84,7 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
     body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Air Maestro\r\nX-WR-CALDESC:Air Maestro - Modified AM Full External Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ABFS - STANDBY[\s\S]+?END:VEVENT/g, "");
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "");
+    body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION: CAOL - CAO 48[\s\S]+?END:VEVENT/g, ""); //removal for full link but not for simplified links
     console.log("[Path B] Filters applied");
     body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
     body = modifyMainEvents(body); // Main event modifications
@@ -136,7 +137,7 @@ function commonFilters(body, updateParams, syncTime) {
         "LVR",
         "DDO",
         "DIL",
-        " CAOL - CAO 48",
+        //" CAOL - CAO 48",
     ];
 
     // Simplify event names using "Original Title: New Title" (processed after the filter)
@@ -151,6 +152,7 @@ function commonFilters(body, updateParams, syncTime) {
         "LR - Leave Requested": "Leave Requested",
         "DIL - Day Off In Lieu": "DIL",
         "CAO 48 LIM": "CAO",
+        "CAOL - CAO 48 Limitation": "CAO 48 Limitation",
     };
 
     summaryFilters.forEach(pattern => {
@@ -400,7 +402,7 @@ function simpleSARFilters(body, updateParams, syncTime) {
         "LVR",
         "DDO",
         "DIL",
-        " CAOL - CAO 48",
+        //" CAOL - CAO 48",
     ];
 
     // Simplify event names using "Original Title: New Title" (processed after the filter)
@@ -414,7 +416,7 @@ function simpleSARFilters(body, updateParams, syncTime) {
         "SICK - Sick Leave": "Sick Leave",
         "LR - Leave Requested": "Leave Requested",
         "DIL - Day Off In Lieu": "DIL",
-        "CAOL - CAO 48 Limitation": "CAO",
+        "CAOL - CAO 48 Limitation": "CAO 48 Limitation",
     };
 
     summaryFilters.forEach(pattern => {
