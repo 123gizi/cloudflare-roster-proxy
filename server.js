@@ -1,27 +1,79 @@
 const http = require('http');
 const fs = require('fs');
 const url = require('url');
+const path = require('path');
 
 const html_home = fs.readFileSync('./html_home.html', 'utf8');
 const html_denied = fs.readFileSync('./html_denied.html', 'utf8');
+
+// --- IMAGE WHITELIST LOGIC ---
+// This scans the images directory (and subdirectories) at startup.
+const IMAGES_ROOT = path.join(__dirname, 'images');
+const imageWhitelist = new Set();
+function walkDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir);
+    for (const file of files) {
+        const filePath = path.join(dir, file);
+        if (fs.statSync(filePath).isDirectory()) {
+            walkDir(filePath);
+        } else {
+            // Store the relative path (e.g., /images/icons/Google_Calendar.svg)
+            const relativePath = '/' + path.relative(__dirname, filePath).replace(/\\/g, '/');
+            imageWhitelist.add(relativePath);
+        }
+    }
+}
+walkDir(IMAGES_ROOT);
+console.log(`Image Whitelist initialized with ${imageWhitelist.size} files.`);
+
+// Helper to determine the correct Content-Type for images
+const getMimeType = (ext) => {
+    const mimeTypes = {
+        '.svg': 'image/svg+xml',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.ico': 'image/x-icon'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+};
 
 function getTimeStamps() {
     const now = new Date();
     return {
         syncTime: now.toUTCString(), // Placed inside event DESCRIPTION for user awareness
-        formattedNow: now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, ''), //YYYYMMDDTHHMMSSZ - Placed inside ICS header as required by some calendar services
+        formattedNow: now.toISOString().replace(/\.\d{3}Z$/, 'Z').replace(/[:-]/g, ''), // YYYYMMDDTHHMMSSZ - Placed inside ICS header as required by some calendar services
     };
 }
 
 const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
+    let pathname = parsedUrl.pathname;
     let targetUrl = parsedUrl.query.url;
-    const updateParams = parsedUrl.query.hideupdate; //Ensure you pass updateParams to commonFilters
+    const updateParams = parsedUrl.query.hideupdate;
+
+// --- SECURE STATIC ASSETS ---
+    if (pathname.startsWith('/images/')) {
+        if (imageWhitelist.has(pathname)) {
+            const imagePath = path.join(__dirname, pathname);
+            if (imagePath.startsWith(IMAGES_ROOT)) {
+                const ext = path.extname(imagePath).toLowerCase();
+                res.writeHead(200, { 'Content-Type': getMimeType(ext) });
+                fs.createReadStream(imagePath).pipe(res);
+                return;
+            }
+        }
+        res.writeHead(403, { 'Content-Type': 'text/html; charset=UTF-8' });
+        res.end(html_denied);
+        return;
+    }
 
     const { syncTime, formattedNow } = getTimeStamps();
-    console.log(`${syncTime} - URL: ${targetUrl}`); //Troubleshooting log - can be removed at a later stage
 
     if (targetUrl) {
+        console.log(`${syncTime} - URL: ${targetUrl}`);
+        // Troubleshooting log - can be removed at a later stage
         if (targetUrl.startsWith('webcals://airmaestro.cobhamspecialmission.com.au')) {
             targetUrl = 'https://airmaestro.surveillanceaustralia' + targetUrl.slice('webcals://airmaestro.cobhamspecialmission'.length);
         } else if (targetUrl.startsWith('https://airmaestro.cobhamspecialmission.com.au')) {
@@ -58,21 +110,28 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(403, {'Content-Type': 'text/html; charset=UTF-8'});
             res.end(html_denied);
         }
-    } else {
+    }
+    // Explicitly handle the root and the home file
+    else if (pathname === '/' || pathname === '/index.html') {
         res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
         res.end(html_home);
+    } 
+    // Block all other "random" URL paths
+    else {
+        res.writeHead(403, {'Content-Type': 'text/html; charset=UTF-8'});
+        res.end(html_denied);
     }
 });
 
 // Processing for AM Simplified Link
 function processPathA(body, updateParams, formattedNow, syncTime) {
     console.log("[Path A] Starting process");
-    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`);
     body = body.replace(/BEGIN:VEVENT((?!SUMMARY:|BEGIN:VEVENT)[\s\S])*?END:VEVENT|BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path A] Filters applied");
     body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
-    body = modifySimpleEvents(body); // Simple event modifications
-    body = modifyAllDayEvents(body); // Process all-day events
+    body = modifySimpleEvents(body);
+    body = modifyAllDayEvents(body);
     body = finaliseICSContent(body);
     console.log("[Path A] Completed processing");
     return body;
@@ -86,9 +145,9 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:ADM - Administration[\s\S]+?END:VEVENT/g, "");
     body = body.replace(/BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?DESCRIPTION: CAOL - CAO 48[\s\S]+?END:VEVENT/g, ""); //removal for full link but not for simplified links
     console.log("[Path B] Filters applied");
-    body = commonFilters(body, updateParams, syncTime); // Process filters prior to modifying events
-    body = modifyMainEvents(body); // Main event modifications
-    body = modifyAllDayEvents(body); // Process all-day events
+    body = commonFilters(body, updateParams, syncTime);
+    body = modifyMainEvents(body);
+    body = modifyAllDayEvents(body);
     body = body.replace(/\bF\s*i\s*e\s*l\s*d\s*s\s*:/g, "\r\n Fields:\\n"); // Correct "Custom Fields:" to ensure it ends with a new line.
     body = body.replace(/S\s*c\s*h\s*e\s*d\s*u\s*l\s*e\s*d\s*\\n\s*O\s*n\s*-\s*T\s*a\s*s\s*k/g, "Scheduled On-Task\r\n "); // Correct "Scheduled On-Task" to ensure it displays on one line.
     body = finaliseICSContent(body);
@@ -99,11 +158,11 @@ function processPathB(body, updateParams, formattedNow, syncTime) {
 // Processing for SAR Simplified Link
 function processPathC(body, updateParams, formattedNow, syncTime) {
     console.log("[Path C] Starting process");
-    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple SAR Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`); // Name variance to assist with distinguishing between the 3 paths should both be used within the same calendar application
+    body = body.replace("VERSION:2.0", `VERSION:2.0\r\nX-WR-CALNAME:Simple SAR Roster\r\nX-WR-CALDESC:Air Maestro - Modified AM Simplified Link for general use\r\nLAST-MODIFIED:${formattedNow}\r\nMETHOD:PUBLISH\r\nREFRESH-INTERVAL:PT1H\r\nX-PUBLISHED-TTL:PT1H`);
     body = body.replace(/BEGIN:VEVENT((?!SUMMARY:|BEGIN:VEVENT)[\s\S])*?END:VEVENT|BEGIN:VEVENT([\s\S](?!BEGIN:VEVENT))+?SUMMARY:\r\nUID:[\s\S]+?END:VEVENT/g, ""); // Remove events with no titles
     console.log("[Path C] Filters applied");
-    body = simpleSARFilters(body, updateParams, syncTime); // Process filters prior to modifying events
-    body = modifyAllDayEvents(body); // Process all-day events
+    body = simpleSARFilters(body, updateParams, syncTime);
+    body = modifyAllDayEvents(body);
     body = finaliseICSContent(body);
     console.log("[Path C] Completed processing");
     return body;
@@ -115,8 +174,6 @@ function commonFilters(body, updateParams, syncTime) {
 
     // Filters to remove duplicate information within AM based on SUMMARY and DESCRIPTION
     const summaryFilters = [
-        //"ABFS - STANDBY",
-        //"ADM - Administration",
         "CARERS LEAVE",
         ".*SAPL",
         ".*AMSA",
@@ -137,7 +194,6 @@ function commonFilters(body, updateParams, syncTime) {
         "LVR",
         "DDO",
         "DIL",
-        //" CAOL - CAO 48",
     ];
 
     // Simplify event names using "Original Title: New Title" (processed after the filter)
@@ -167,9 +223,6 @@ function commonFilters(body, updateParams, syncTime) {
     for (const [oldName, newName] of Object.entries(eventNames)) {
         body = body.replace(new RegExp(`SUMMARY:${oldName}`, 'g'), `SUMMARY:${newName}`);
     }
-
-    //body = body.replace(/DTSTART:/gms, "DTSTART;TZID=Etc/UTC:") //TZID Missing in recency events. This is processed after the filters to improve efficiency
-    //body = body.replace(/DTEND:/gms, "DTEND;TZID=Etc/UTC:")
 
     if (updateParams != "true") { //hideupdate API Option
       body = body.replace(/DESCRIPTION:/g, `DESCRIPTION:Last Roster Sync: ${syncTime} \\n\\n\r\n `); //Time logged within events for awareness
@@ -219,7 +272,7 @@ function modifyMainEvents(body) {
             if (previousEvent && (previousEvent.includes("TVL") || previousEvent.includes("TRVD"))) {
                 events[i] = modifyDT(currentEvent, previousEvent);
                 events.splice(i - 1, 1); // Remove the previous event
-                i--; // Adjust index since we removed an event
+                i--; // Adjust index after event removal
             }
         }
     }
@@ -310,7 +363,6 @@ function extractDTSTART(event) {
     if (match) {
         return match[0];
     }
-    // If DTSTART is not found, handle appropriately (e.g., throw an error)
     throw new Error('DTSTART not found in event');
 }
 
@@ -320,7 +372,6 @@ function extractDTEND(event) {
     if (match) {
         return match[0];
     }
-    // If DTEND is not found, handle appropriately (e.g., throw an error)
     throw new Error('DTEND not found in event');
 }
 
@@ -361,7 +412,7 @@ function modifySimpleEvents(body) {
                 events[i] = modifyDT(currentEvent, previousEvent);
                 events[i] = events[i].replace(/SUMMARY:/, "SUMMARY:Travel: "); // Add to the begining of the event title that this is a Travel event for clairty
                 events.splice(i - 1, 1); // Remove the previous event
-                i--; // Adjust index since we removed an event
+                i--; // Adjust index after event removal
             }
         }
     }
@@ -402,7 +453,6 @@ function simpleSARFilters(body, updateParams, syncTime) {
         "LVR",
         "DDO",
         "DIL",
-        //" CAOL - CAO 48",
     ];
 
     // Simplify event names using "Original Title: New Title" (processed after the filter)
@@ -446,10 +496,10 @@ function simpleSARFilters(body, updateParams, syncTime) {
 function finaliseICSContent(body) {
     console.log("Ensuring ICS ends with END:VCALENDAR");
 
-    // Reconstruct the final ICS body
+    // Reconstruct final ICS body
     let finalBody = body;
 
-    // Ensure the file ends with END:VCALENDAR
+    // Ensure file ends with END:VCALENDAR
     if (!finalBody.trim().endsWith("END:VCALENDAR")) {
         finalBody += '\r\nEND:VCALENDAR';
     }
